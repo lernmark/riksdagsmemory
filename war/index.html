@@ -1,0 +1,161 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- The HTML 4.01 Transitional DOCTYPE declaration-->
+<!-- above set at the top of the file will set     -->
+<!-- the browser's rendering engine into           -->
+<!-- "Quirks Mode". Replacing this declaration     -->
+<!-- with a "Standards Mode" doctype is supported, -->
+<!-- but may lead to some differences in layout.   -->
+
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>Sveriges riksdag</title>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+    <link rel="stylesheet" href="a.css" />
+  </head>
+
+  <body>
+    <h1>Sveriges riksdag</h1>
+
+    <ul id="sort-by">
+      <li><a href="#parti">Parti</a></li>
+      <li><a href="#fodd_ar">Födelseår</a></li>
+    </ul>
+    <ul id="filters">
+      <li><a href="#" data-filter="*">show all</a></li>
+      <li><a href="#" data-filter=".C">C</a></li>
+      <li><a href="#" data-filter=".FP">FP</a></li>
+      <li><a href="#" data-filter=".S, .V">S + V</a></li>
+      <li><a href="#" data-filter=":not(.transition)">not transition</a></li>
+      <li><a href="#" data-filter=".metal:not(.transition)">metal but not transition</a></li>
+      <li><a href="#" data-filter=".Gävleborgs">Gävleborgs län</a></li>
+    </ul>    
+	  <div id="container" class="variable-sizes clearfix">
+    </div> <!-- #container -->
+    
+    <div id="images"></div>
+    <script type="text/javascript">
+      $.getJSON("/riksdagens?ccontrol=public&ctype=application/x-javascript&ctime=3000&jsoncallback=?",
+        function(data){
+          console.log(data);
+
+          $.each(data.personlista, function(i,person){
+            var led = $("<div/>");
+            led.addClass("element " + person.parti + " " + person.valkrets);
+            led.attr("data-fodd_ar",person.fodd_ar);
+            led.attr("data-parti",person.parti);
+            led.attr("data-valkrets",person.valkrets);
+            led.append($("<p class='number'>" + person.fodd_ar + "</p>"));
+            led.append($("<p class='valkrets'>" + person.valkrets + "</p>"));
+            led.append($("<h3 class='symbol'>" + person.parti + "</h3>"));
+            led.append($("<p class='image'><img class='thumbnail' src='" + person.bild_url_80 + "' alt-picture='" + person.bild_url_192 + "'/></p>"));
+  
+            led.append($("<div class='name'>" + person.tilltalsnamn + " " + person.efternamn + "<br/>Född: " + person.fodd_ar + "<br/>" +person.status + "<br/>" + "</div>"));
+            led.append($("<p class='weight'>" + i + "</p>"));
+
+            $("#container").append(led);
+          });
+
+          $(function(){
+            var $container = $('#container');
+            $container.isotope({
+           
+              itemSelector: '.element',
+              getSortData : {
+                parti : function( $elem ) {
+                  return $elem.attr('data-parti');
+                },
+                fodd_ar : function( $elem ) {
+                  return $elem.attr('data-fodd_ar');
+                }
+              }              
+            });
+
+            // change size of clicked element
+            $container.delegate( '.element', 'click', function(){
+              $(this).toggleClass('large');
+              console.log($(this).hasClass("large"));
+              var image = $(this).find(".image img");
+              console.log(image);
+
+              var currentUrl = image.attr("src");
+              var newUrl = image.attr("alt-picture");
+
+              image.attr("src", newUrl);
+              image.attr("alt-picture", currentUrl);
+              // image.toggle("slow",
+              //     function callback() {
+              //       console.log(this); // dom element
+              //     }
+              //   );
+              if ($(this).hasClass("large")) {
+                $container.undelegate( '.element', 'mouseenter');
+                $container.undelegate( '.element', 'mouseleave');
+              } else {
+                bindEventsToSmallElement($container);
+              }
+              $container.isotope('reLayout');
+            });
+
+            bindEventsToSmallElement($container);
+
+            // toggle variable sizes of all elements
+            $('#toggle-sizes').find('a').click(function(){
+              $container
+                .toggleClass('variable-sizes')
+                .isotope('reLayout');
+              return false;
+            });    
+
+
+            $('#sort-by a').click(function(){
+              // get href attribute, minus the '#'
+              var sortName = $(this).attr('href').slice(1);
+              $('#container').isotope({ sortBy : sortName });
+              return false;
+            });
+
+            // filter items when filter link is clicked
+            $('#filters a').click(function(){
+              var selector = $(this).attr('data-filter');
+              $container.isotope({ filter: selector });
+              return false;
+            });
+
+
+
+          });
+
+
+        });
+
+
+var bindEventsToSmallElement = function($container) {
+  // Show more info on mouseover
+  $container.delegate( '.element', 'mouseenter', function(){
+    $(this).find(".name").animate({ 
+      height: "90px",
+      opacity : "0.9"
+    }, 100 );
+    // $container.isotope('reLayout');
+  });
+
+  // Show more info on mouseout
+  $container.delegate( '.element', 'mouseleave', function(){
+    $(this).find(".name").animate({ 
+      height: "20px",
+      opacity : "0.8"
+    }, 100 );
+    // $container.isotope('reLayout');
+  });  
+}
+
+
+
+
+  
+    </script>
+    <script type="text/javascript" src="jquery.isotope.min.js"></script>
+
+  </body>
+</html>
