@@ -135,3 +135,133 @@
         </div>
         <button onclick="startaSpel()">Slumpa & Starta om</button>
     </div>
+
+    <div id="msg">Välj en kategori ovan för att börja!</div>
+    <div id="game-board" class="grid"></div>
+</div>
+
+<script>
+    let firstCard, secondCard;
+    let hasFlippedCard = false;
+    let lockBoard = false;
+    let matchesFound = 0;
+    let currentPairs = 8;
+    let lastFilter = { typ: '', varde: '' };
+
+    function updateGame(typ, varde) {
+        lastFilter = { typ, varde };
+        startaSpel();
+    }
+
+    async function startaSpel() {
+        const pairSelect = document.getElementById('pair-count');
+        currentPairs = parseInt(pairSelect.value);
+        
+        const { typ, varde } = lastFilter;
+        let url = `https://data.riksdagen.se/personlista/?utformat=json&rdlstatus=tjanst`;
+        if (typ && varde) url += `&${typ}=${encodeURIComponent(varde)}`;
+
+        document.getElementById('msg').innerText = "Hämtar ledamöter...";
+        
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            let ledamoter = data.personlista.person;
+
+            // Tvätta datan
+            ledamoter = ledamoter.filter(p => p.bild_url_192);
+            
+            if (ledamoter.length < currentPairs) {
+                document.getElementById('msg').innerText = `Hittade bara ${ledamoter.length} ledamöter. Sänker antal par...`;
+                currentPairs = ledamoter.length;
+            }
+
+            const urval = ledamoter.sort(() => 0.5 - Math.random()).slice(0, currentPairs);
+            const spelKort = [...urval, ...urval].sort(() => 0.5 - Math.random());
+            
+            resetGame();
+            renderBoard(spelKort);
+            document.getElementById('msg').innerText = `Hitta de ${currentPairs} paren!`;
+        } catch (e) {
+            document.getElementById('msg').innerText = "Fel vid hämtning. Prova en annan kategori!";
+        }
+    }
+
+    function renderBoard(kortLista) {
+        const board = document.getElementById('game-board');
+        board.innerHTML = '';
+        
+        kortLista.forEach(person => {
+            const card = document.createElement('div');
+            card.classList.add('card');
+            card.dataset.id = person.intressent_id;
+
+            card.innerHTML = `
+                <div class="card-inner">
+                    <div class="card-front">?</div>
+                    <div class="card-back">
+                        <img src="${person.bild_url_192}" loading="lazy">
+                        <p class="name">${person.tilltalsnamn} ${person.efternamn}</p>
+                        <p class="info">${person.parti} | ${person.valkrets || 'Sverige'}</p>
+                    </div>
+                </div>
+            `;
+            card.addEventListener('click', flipCard);
+            board.appendChild(card);
+        });
+    }
+
+    function flipCard() {
+        if (lockBoard || this === firstCard) return;
+        this.classList.add('is-flipped');
+
+        if (!hasFlippedCard) {
+            hasFlippedCard = true;
+            firstCard = this;
+            return;
+        }
+
+        secondCard = this;
+        checkForMatch();
+    }
+
+    function checkForMatch() {
+        const isMatch = firstCard.dataset.id === secondCard.dataset.id;
+        if (isMatch) {
+            matchesFound++;
+            disableCards();
+            if (matchesFound === currentPairs) {
+                document.getElementById('msg').innerText = "Snyggt! Du hittade alla! 🏆";
+            }
+        } else {
+            unflipCards();
+        }
+    }
+
+    function disableCards() {
+        firstCard.removeEventListener('click', flipCard);
+        secondCard.removeEventListener('click', flipCard);
+        resetTurn();
+    }
+
+    function unflipCards() {
+        lockBoard = true;
+        setTimeout(() => {
+            firstCard.classList.remove('is-flipped');
+            secondCard.classList.remove('is-flipped');
+            resetTurn();
+        }, 1000);
+    }
+
+    function resetTurn() {
+        [hasFlippedCard, lockBoard] = [false, false];
+        [firstCard, secondCard] = [null, null];
+    }
+
+    function resetGame() {
+        resetTurn();
+        matchesFound = 0;
+    }
+</script>
+</body>
+</html>
