@@ -3,265 +3,176 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Riksdags-Memory</title>
+    <title>Riksdags-Memory Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <style>
-        :root { --blue: #005293; --gold: #febc11; --dark: #1d1d1d; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; text-align: center; margin: 0; padding: 20px; color: var(--dark); }
-        
-        .container { max-width: 1000px; margin: 0 auto; }
-        h1 { margin-bottom: 10px; color: var(--blue); }
-        
-        .menu-section { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .menu-row { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; margin-bottom: 15px; }
-        
-        label { font-weight: bold; display: block; margin-bottom: 5px; font-size: 14px; color: #666; }
-        select, button { padding: 10px 15px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
-        button { background: var(--blue); color: white; border: none; cursor: pointer; font-weight: bold; transition: all 0.2s; }
-        button:hover { background: #003e70; transform: translateY(-1px); }
-        
-        .grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
-            gap: 15px; margin: 20px auto; 
+        .card-flip { perspective: 1000px; }
+        .card-inner { 
+            transition: transform 0.6s; 
+            transform-style: preserve-3d; 
+            position: relative;
+            width: 100%; height: 100%;
         }
-
-        /* Card Styles */
-        .card { height: 230px; perspective: 1000px; cursor: pointer; }
-        .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; }
-        .card.is-flipped .card-inner { transform: rotateY(180deg); }
-        
+        .is-flipped { transform: rotateY(180deg); }
         .card-front, .card-back { 
             position: absolute; width: 100%; height: 100%; 
-            backface-visibility: hidden; border-radius: 10px; 
-            display: flex; flex-direction: column; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            backface-visibility: hidden; border-radius: 0.75rem;
         }
-        
-        .card-front { background: var(--blue); color: white; justify-content: center; font-size: 40px; border: 3px solid white; }
-        .card-back { background: white; transform: rotateY(180deg); padding: 10px; box-sizing: border-box; }
-
-        .card-back img { width: 100%; height: 150px; object-fit: cover; border-radius: 6px; background: #eee; }
-        .name { margin: 8px 0 2px; font-size: 13px; font-weight: bold; line-height: 1.2; }
-        .info { margin: 0; font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
-
-        #msg { font-size: 18px; margin: 20px; font-weight: bold; color: var(--blue); min-height: 27px; }
+        .card-back { transform: rotateY(180deg); }
     </style>
 </head>
-<body>
+<body class="bg-slate-50 text-slate-900 min-h-screen">
 
-<div class="container">
-    <h1>🏛️ Riksdags-Memory</h1>
-    
-    <div class="menu-section">
-        <div class="menu-row">
+<div id="app" class="max-w-5xl mx-auto px-4 py-8">
+    <header class="text-center mb-10">
+        <h1 class="text-4xl font-extrabold text-slate-800 mb-2">Riksdags-Memory</h1>
+        <p class="text-slate-500">Träna ansikten på Sveriges makthavare</p>
+    </header>
+
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-                <label>Antal par</label>
-                <select id="pair-count">
-                    <option value="4">8 kort (Lätt)</option>
-                    <option value="8" selected>16 kort (Normal)</option>
-                    <option value="12">24 kort (Utmaning)</option>
-                    <option value="18">36 kort (Expert)</option>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Antal par</label>
+                <select v-model="settings.pairs" class="w-full bg-slate-100 border-none rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500">
+                    <option :value="4">4 par (Enkelt)</option>
+                    <option :value="8">8 par (Normal)</option>
+                    <option :value="12">12 par (Svårt)</option>
+                    <option :value="18">18 par (Expert)</option>
                 </select>
             </div>
             <div>
-                <label>Välj Parti</label>
-                <select id="select-parti" onchange="updateGame('parti', this.value)">
-                    <option value="">Alla partier</option>
-                    <option value="S">Socialdemokraterna</option>
-                    <option value="M">Moderaterna</option>
-                    <option value="SD">Sverigedemokraterna</option>
-                    <option value="C">Centerpartiet</option>
-                    <option value="V">Vänsterpartiet</option>
-                    <option value="KD">Kristdemokraterna</option>
-                    <option value="MP">Miljöpartiet</option>
-                    <option value="L">Liberalerna</option>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Filtrera på</label>
+                <select v-model="settings.filterType" class="w-full bg-slate-100 border-none rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500">
+                    <option value="parti">Parti</option>
+                    <option value="org">Utskott</option>
+                    <option value="valkrets">Valkrets</option>
                 </select>
             </div>
             <div>
-                <label>Välj Utskott</label>
-                <select id="select-utskott" onchange="updateGame('org', this.value)">
-                    <option value="">Välj utskott...</option>
-                    <option value="AU">Arbetsmarknadsutskottet</option>
-                    <option value="CU">Civilutskottet</option>
-                    <option value="FiU">Finansutskottet</option>
-                    <option value="FöU">Försvarsutskottet</option>
-                    <option value="JuU">Justitieutskottet</option>
-                    <option value="KU">Konstitutionsutskottet</option>
-                    <option value="KrU">Kulturutskottet</option>
-                    <option value="MJU">Miljö- och jordbruksutskottet</option>
-                    <option value="NU">Näringsutskottet</option>
-                    <option value="SkU">Skatteutskottet</option>
-                    <option value="SfU">Socialförsäkringsutskottet</option>
-                    <option value="SoU">Socialutskottet</option>
-                    <option value="TU">Trafikutskottet</option>
-                    <option value="UbU">Utbildningsutskottet</option>
-                    <option value="UU">Utrikesutskottet</option>
-                    <option value="EUN">EU-nämnden</option>
-                </select>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Värde</label>
+                <input v-model="settings.filterValue" placeholder="T.ex. S, FiU eller Skåne..." 
+                       class="w-full bg-slate-100 border-none rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500">
             </div>
-            <div>
-                <label>Valkrets</label>
-                <select id="select-valkrets" onchange="updateGame('valkrets', this.value)">
-                    <option value="">Hela Sverige</option>
-                    <option value="Blekinge län">Blekinge</option>
-                    <option value="Dalarnas län">Dalarna</option>
-                    <option value="Gotlands län">Gotland</option>
-                    <option value="Gävleborgs län">Gävleborg</option>
-                    <option value="Hallands län">Halland</option>
-                    <option value="Jämtlands län">Jämtland</option>
-                    <option value="Jönköpings län">Jönköping</option>
-                    <option value="Kalmar län">Kalmar</option>
-                    <option value="Kronobergs län">Kronoberg</option>
-                    <option value="Norrbottens län">Norrbotten</option>
-                    <option value="Skåne läns norra och östra">Skåne N/Ö</option>
-                    <option value="Skåne läns södra">Skåne Södra</option>
-                    <option value="Skåne läns västra">Skåne Västra</option>
-                    <option value="Stockholms län">Stockholms län</option>
-                    <option value="Stockholms kommun">Stockholms stad</option>
-                    <option value="Södermanlands län">Södermanland</option>
-                    <option value="Uppsala län">Uppsala</option>
-                    <option value="Värmlands län">Värmland</option>
-                    <option value="Västerbottens län">Västerbotten</option>
-                    <option value="Västernorrlands län">Västernorrland</option>
-                    <option value="Västmanlands län">Västmanland</option>
-                    <option value="Västra Götalands läns norra">Västra Götaland N</option>
-                    <option value="Västra Götalands läns södra">Västra Götaland S</option>
-                    <option value="Västra Götalands läns västra">Västra Götaland V</option>
-                    <option value="Västra Götalands läns östra">Västra Götaland Ö</option>
-                    <option value="Göteborgs kommun">Göteborg</option>
-                    <option value="Örebro län">Örebro</option>
-                    <option value="Östergötlands län">Östergötland</option>
-                </select>
+            <div class="flex items-end">
+                <button @click="loadGame" :disabled="loading"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-lg transition-all disabled:opacity-50">
+                    {{ loading ? 'Laddar...' : 'Starta nytt spel' }}
+                </button>
             </div>
         </div>
-        <button onclick="startaSpel()">Slumpa & Starta om</button>
     </div>
 
-    <div id="msg">Välj en kategori ovan för att börja!</div>
-    <div id="game-board" class="grid"></div>
+    <div v-if="message" class="text-center mb-6 py-2 px-4 bg-blue-50 text-blue-700 rounded-full inline-block mx-auto w-full max-w-sm font-medium">
+        {{ message }}
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <div v-for="(card, index) in cards" :key="index" 
+             @click="flipCard(card)"
+             class="card-flip h-52 cursor-pointer group">
+            <div class="card-inner shadow-md" :class="{ 'is-flipped': card.isFlipped || card.isMatched }">
+                <div class="card-front bg-blue-800 flex items-center justify-center text-blue-200 text-3xl font-bold border-4 border-white">
+                    ?
+                </div>
+                <div class="card-back bg-white p-2 border border-slate-200 flex flex-col items-center">
+                    <img :src="card.person.bild_url_192" class="w-full h-32 object-cover rounded-md mb-2 bg-slate-100">
+                    <div class="text-center overflow-hidden w-full">
+                        <p class="text-xs font-bold truncate">{{ card.person.tilltalsnamn }} {{ card.person.efternamn }}</p>
+                        <p class="text-[10px] text-slate-500 uppercase tracking-tighter">{{ card.person.parti }} | {{ card.person.valkrets }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
-    let firstCard, secondCard;
-    let hasFlippedCard = false;
-    let lockBoard = false;
-    let matchesFound = 0;
-    let currentPairs = 8;
-    let lastFilter = { typ: '', varde: '' };
+const { createApp } = Vue;
 
-    function updateGame(typ, varde) {
-        lastFilter = { typ, varde };
-        startaSpel();
-    }
-
-    async function startaSpel() {
-        const pairSelect = document.getElementById('pair-count');
-        currentPairs = parseInt(pairSelect.value);
-        
-        const { typ, varde } = lastFilter;
-        let url = `https://data.riksdagen.se/personlista/?utformat=json&rdlstatus=tjanst`;
-        if (typ && varde) url += `&${typ}=${encodeURIComponent(varde)}`;
-
-        document.getElementById('msg').innerText = "Hämtar ledamöter...";
-        
-        try {
-            const response = await fetch(url);
-            const data = await response.json();
-            let ledamoter = data.personlista.person;
-
-            // Tvätta datan
-            ledamoter = ledamoter.filter(p => p.bild_url_192);
-            
-            if (ledamoter.length < currentPairs) {
-                document.getElementById('msg').innerText = `Hittade bara ${ledamoter.length} ledamöter. Sänker antal par...`;
-                currentPairs = ledamoter.length;
+createApp({
+    data() {
+        return {
+            loading: false,
+            message: 'Välj inställningar och klicka på Starta!',
+            cards: [],
+            flippedCards: [],
+            settings: {
+                pairs: 8,
+                filterType: 'parti',
+                filterValue: 'S'
             }
-
-            const urval = ledamoter.sort(() => 0.5 - Math.random()).slice(0, currentPairs);
-            const spelKort = [...urval, ...urval].sort(() => 0.5 - Math.random());
+        }
+    },
+    methods: {
+        async loadGame() {
+            this.loading = true;
+            this.message = 'Hämtar data från Riksdagen...';
+            this.cards = [];
             
-            resetGame();
-            renderBoard(spelKort);
-            document.getElementById('msg').innerText = `Hitta de ${currentPairs} paren!`;
-        } catch (e) {
-            document.getElementById('msg').innerText = "Fel vid hämtning. Prova en annan kategori!";
-        }
-    }
+            try {
+                const url = `https://data.riksdagen.se/personlista/?utformat=json&${this.settings.filterType}=${encodeURIComponent(this.settings.filterValue)}&rdlstatus=tjanst`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                let ledamoter = data.personlista.person.filter(p => p.bild_url_192);
+                
+                // Blanda och välj par
+                const selection = ledamoter.sort(() => 0.5 - Math.random()).slice(0, this.settings.pairs);
+                
+                // Skapa kort-objekt
+                let gameSet = [...selection, ...selection].map((person, index) => ({
+                    id: index,
+                    personId: person.intressent_id,
+                    person: person,
+                    isFlipped: false,
+                    isMatched: false
+                }));
 
-    function renderBoard(kortLista) {
-        const board = document.getElementById('game-board');
-        board.innerHTML = '';
-        
-        kortLista.forEach(person => {
-            const card = document.createElement('div');
-            card.classList.add('card');
-            card.dataset.id = person.intressent_id;
-
-            card.innerHTML = `
-                <div class="card-inner">
-                    <div class="card-front">?</div>
-                    <div class="card-back">
-                        <img src="${person.bild_url_192}" loading="lazy">
-                        <p class="name">${person.tilltalsnamn} ${person.efternamn}</p>
-                        <p class="info">${person.parti} | ${person.valkrets || 'Sverige'}</p>
-                    </div>
-                </div>
-            `;
-            card.addEventListener('click', flipCard);
-            board.appendChild(card);
-        });
-    }
-
-    function flipCard() {
-        if (lockBoard || this === firstCard) return;
-        this.classList.add('is-flipped');
-
-        if (!hasFlippedCard) {
-            hasFlippedCard = true;
-            firstCard = this;
-            return;
-        }
-
-        secondCard = this;
-        checkForMatch();
-    }
-
-    function checkForMatch() {
-        const isMatch = firstCard.dataset.id === secondCard.dataset.id;
-        if (isMatch) {
-            matchesFound++;
-            disableCards();
-            if (matchesFound === currentPairs) {
-                document.getElementById('msg').innerText = "Snyggt! Du hittade alla! 🏆";
+                this.cards = gameSet.sort(() => 0.5 - Math.random());
+                this.message = `Hitta de ${this.settings.pairs} paren!`;
+            } catch (error) {
+                this.message = 'Kunde inte ladda data. Kontrollera filtret.';
+            } finally {
+                this.loading = false;
             }
-        } else {
-            unflipCards();
+        },
+
+        flipCard(card) {
+            if (this.flippedCards.length === 2 || card.isFlipped || card.isMatched) return;
+
+            card.isFlipped = true;
+            this.flippedCards.push(card);
+
+            if (this.flippedCards.length === 2) {
+                this.checkMatch();
+            }
+        },
+
+        checkMatch() {
+            const [c1, c2] = this.flippedCards;
+            if (c1.personId === c2.personId) {
+                c1.isMatched = true;
+                c2.isMatched = true;
+                this.flippedCards = [];
+                this.checkWin();
+            } else {
+                setTimeout(() => {
+                    c1.isFlipped = false;
+                    c2.isFlipped = false;
+                    this.flippedCards = [];
+                }, 1000);
+            }
+        },
+
+        checkWin() {
+            if (this.cards.every(c => c.isMatched)) {
+                this.message = "Snyggt! Du vann! 🏆";
+            }
         }
     }
-
-    function disableCards() {
-        firstCard.removeEventListener('click', flipCard);
-        secondCard.removeEventListener('click', flipCard);
-        resetTurn();
-    }
-
-    function unflipCards() {
-        lockBoard = true;
-        setTimeout(() => {
-            firstCard.classList.remove('is-flipped');
-            secondCard.classList.remove('is-flipped');
-            resetTurn();
-        }, 1000);
-    }
-
-    function resetTurn() {
-        [hasFlippedCard, lockBoard] = [false, false];
-        [firstCard, secondCard] = [null, null];
-    }
-
-    function resetGame() {
-        resetTurn();
-        matchesFound = 0;
-    }
+}).mount('#app');
 </script>
+
 </body>
 </html>
