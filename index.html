@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Riksdags-Memory</title>
+    <style>
+        :root { --blue: #005293; --gold: #febc11; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f4f4; text-align: center; margin: 0; padding: 20px; }
+        
+        .menu { margin-bottom: 20px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+        button { padding: 10px 15px; cursor: pointer; border: none; background: var(--blue); color: white; border-radius: 5px; font-weight: bold; }
+        button:hover { opacity: 0.9; transform: translateY(-2px); }
+
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); 
+            gap: 15px; max-width: 800px; margin: 0 auto; 
+        }
+
+        /* 3D Card Effect */
+        .card { height: 180px; perspective: 1000px; cursor: pointer; }
+        .card-inner { 
+            position: relative; width: 100%; height: 100%; 
+            transition: transform 0.6s; transform-style: preserve-3d; 
+        }
+        .card.is-flipped .card-inner { transform: rotateY(180deg); }
+        
+        .card-front, .card-back { 
+            position: absolute; width: 100%; height: 100%; 
+            backface-visibility: hidden; border-radius: 8px; 
+            display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .card-front { background: var(--blue); color: white; font-size: 24px; font-weight: bold; border: 2px solid white; }
+        .card-back { 
+            background: white; transform: rotateY(180deg); 
+            flex-direction: column; overflow: hidden; padding: 5px;
+        }
+
+        .card-back img { width: 100%; height: 130px; object-fit: cover; border-radius: 4px; }
+        .card-back p { margin: 5px 0 0; font-size: 11px; font-weight: bold; color: #333; }
+
+        .hidden { display: none; }
+        #msg { font-size: 20px; color: var(--blue); margin: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>🏛️ Riksdags-Memory</h1>
+    <div class="menu">
+        <button onclick="startaSpel('parti', 'S')">S</button>
+        <button onclick="startaSpel('parti', 'M')">M</button>
+        <button onclick="startaSpel('parti', 'SD')">SD</button>
+        <button onclick="startaSpel('parti', 'C')">C</button>
+        <button onclick="startaSpel('parti', 'V')">V</button>
+        <button onclick="startaSpel('parti', 'KD')">KD</button>
+        <button onclick="startaSpel('parti', 'MP')">MP</button>
+        <button onclick="startaSpel('parti', 'L')">L</button>
+        <button onclick="startaSpel('org', 'FiU')">Finansutskottet</button>
+    </div>
+
+    <div id="msg">Välj en kategori för att börja!</div>
+    <div id="game-board" class="grid"></div>
+
+    <script>
+        let firstCard, secondCard;
+        let hasFlippedCard = false;
+        let lockBoard = false;
+        let matchesFound = 0;
+        let totalPairs = 8;
+
+        async function startaSpel(typ, varde) {
+            document.getElementById('msg').innerText = "Hämtar ledamöter...";
+            const url = `https://data.riksdagen.se/personlista/?utformat=json&${typ}=${varde}&rdlstatus=tjanst`;
+            
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                let ledamoter = data.personlista.person;
+
+                // 1. Tvätta datan: Filtrera de som har bild och slumpa
+                ledamoter = ledamoter.filter(p => p.bild_url_192);
+                const urval = ledamoter.sort(() => 0.5 - Math.random()).slice(0, totalPairs);
+
+                // 2. Skapa par och blanda om
+                const spelKort = [...urval, ...urval].sort(() => 0.5 - Math.random());
+                
+                resetGame();
+                renderBoard(spelKort);
+                document.getElementById('msg').innerText = `Hitta paren! (${varde})`;
+            } catch (e) {
+                document.getElementById('msg').innerText = "Kunde inte hämta data. Försök igen!";
+            }
+        }
+
+        function renderBoard(kortLista) {
+            const board = document.getElementById('game-board');
+            board.innerHTML = '';
+            
+            kortLista.forEach(person => {
+                const card = document.createElement('div');
+                card.classList.add('card');
+                card.dataset.id = person.intressent_id;
+
+                card.innerHTML = `
+                    <div class="card-inner">
+                        <div class="card-front">?</div>
+                        <div class="card-back">
+                            <img src="${person.bild_url_192}" loading="lazy">
+                            <p>${person.tilltalsnamn} (${person.parti})</p>
+                        </div>
+                    </div>
+                `;
+                card.addEventListener('click', flipCard);
+                board.appendChild(card);
+            });
+        }
+
+        function flipCard() {
+            if (lockBoard || this === firstCard) return;
+            this.classList.add('is-flipped');
+
+            if (!hasFlippedCard) {
+                hasFlippedCard = true;
+                firstCard = this;
+                return;
+            }
+
+            secondCard = this;
+            checkForMatch();
+        }
+
+        function checkForMatch() {
+            const isMatch = firstCard.dataset.id === secondCard.dataset.id;
+            if (isMatch) {
+                matchesFound++;
+                disableCards();
+                if (matchesFound === totalPairs) {
+                    document.getElementById('msg').innerText = "Snyggt! Du hittade alla! 🏆";
+                }
+            } else {
+                unflipCards();
+            }
+        }
+
+        function disableCards() {
+            firstCard.removeEventListener('click', flipCard);
+            secondCard.removeEventListener('click', flipCard);
+            resetTurn();
+        }
+
+        function unflipCards() {
+            lockBoard = true;
+            setTimeout(() => {
+                firstCard.classList.remove('is-flipped');
+                secondCard.classList.remove('is-flipped');
+                resetTurn();
+            }, 1000);
+        }
+
+        function resetTurn() {
+            [hasFlippedCard, lockBoard] = [false, false];
+            [firstCard, secondCard] = [null, null];
+        }
+
+        function resetGame() {
+            resetTurn();
+            matchesFound = 0;
+        }
+    </script>
+</body>
+</html>
