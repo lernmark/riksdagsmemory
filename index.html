@@ -5,227 +5,133 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Riksdags-Memory</title>
     <style>
-        :root { --blue: #005293; --gold: #febc11; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f4f4f4; text-align: center; margin: 0; padding: 20px; }
+        :root { --blue: #005293; --gold: #febc11; --dark: #1d1d1d; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; text-align: center; margin: 0; padding: 20px; color: var(--dark); }
         
-        .menu { margin-bottom: 20px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
-        button { padding: 10px 15px; cursor: pointer; border: none; background: var(--blue); color: white; border-radius: 5px; font-weight: bold; }
-        button:hover { opacity: 0.9; transform: translateY(-2px); }
-
+        .container { max-width: 1000px; margin: 0 auto; }
+        h1 { margin-bottom: 10px; color: var(--blue); }
+        
+        .menu-section { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .menu-row { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; margin-bottom: 15px; }
+        
+        label { font-weight: bold; display: block; margin-bottom: 5px; font-size: 14px; color: #666; }
+        select, button { padding: 10px 15px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
+        button { background: var(--blue); color: white; border: none; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+        button:hover { background: #003e70; transform: translateY(-1px); }
+        
         .grid { 
             display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); 
-            gap: 15px; max-width: 800px; margin: 0 auto; 
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
+            gap: 15px; margin: 20px auto; 
         }
 
-        /* 3D Card Effect */
-        .card { height: 180px; perspective: 1000px; cursor: pointer; }
-        .card-inner { 
-            position: relative; width: 100%; height: 100%; 
-            transition: transform 0.6s; transform-style: preserve-3d; 
-        }
+        /* Card Styles */
+        .card { height: 230px; perspective: 1000px; cursor: pointer; }
+        .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; }
         .card.is-flipped .card-inner { transform: rotateY(180deg); }
         
         .card-front, .card-back { 
             position: absolute; width: 100%; height: 100%; 
-            backface-visibility: hidden; border-radius: 8px; 
-            display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            backface-visibility: hidden; border-radius: 10px; 
+            display: flex; flex-direction: column; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         
-        .card-front { background: var(--blue); color: white; font-size: 24px; font-weight: bold; border: 2px solid white; }
-        .card-back { 
-            background: white; transform: rotateY(180deg); 
-            flex-direction: column; overflow: hidden; padding: 5px;
-        }
+        .card-front { background: var(--blue); color: white; justify-content: center; font-size: 40px; border: 3px solid white; }
+        .card-back { background: white; transform: rotateY(180deg); padding: 10px; box-sizing: border-box; }
 
-        .card-back img { width: 100%; height: 130px; object-fit: cover; border-radius: 4px; }
-        .card-back p { margin: 5px 0 0; font-size: 11px; font-weight: bold; color: #333; }
+        .card-back img { width: 100%; height: 150px; object-fit: cover; border-radius: 6px; background: #eee; }
+        .name { margin: 8px 0 2px; font-size: 13px; font-weight: bold; line-height: 1.2; }
+        .info { margin: 0; font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
 
-        .hidden { display: none; }
-        #msg { font-size: 20px; color: var(--blue); margin: 20px; font-weight: bold; }
-
-        .card { height: 220px; perspective: 1000px; cursor: pointer; } /* Ökad höjd från 180px */
-
-.card-back { 
-    background: white; 
-    transform: rotateY(180deg); 
-    display: flex;
-    flex-direction: column; 
-    padding: 8px;
-    justify-content: flex-start;
-}
-
-.card-back img { 
-    width: 100%; 
-    height: 140px; 
-    object-fit: cover; 
-    border-radius: 4px; 
-    margin-bottom: 5px;
-}
-
-.name { 
-    margin: 0; 
-    font-size: 13px; 
-    font-weight: bold; 
-    color: #333; 
-    line-height: 1.2;
-}
-
-.info { 
-    margin: 3px 0 0; 
-    font-size: 10px; 
-    color: #666; 
-    text-transform: uppercase;
-}
+        #msg { font-size: 18px; margin: 20px; font-weight: bold; color: var(--blue); min-height: 27px; }
     </style>
 </head>
 <body>
 
+<div class="container">
     <h1>🏛️ Riksdags-Memory</h1>
-    <div class="menu">
-        <button onclick="startaSpel('parti', 'S')">S</button>
-        <button onclick="startaSpel('parti', 'M')">M</button>
-        <button onclick="startaSpel('parti', 'SD')">SD</button>
-        <button onclick="startaSpel('parti', 'C')">C</button>
-        <button onclick="startaSpel('parti', 'V')">V</button>
-        <button onclick="startaSpel('parti', 'KD')">KD</button>
-        <button onclick="startaSpel('parti', 'MP')">MP</button>
-        <button onclick="startaSpel('parti', 'L')">L</button>
     
-        <select onchange="startaSpel('org', this.value)">
-            <option value="">Välj utskott...</option>
-            <option value="AU">Arbetsmarknadsutskottet</option>
-            <option value="CU">Civilutskottet</option>
-            <option value="FiU">Finansutskottet</option>
-            <option value="FöU">Försvarsutskottet</option>
-            <option value="JuU">Justitieutskottet</option>
-            <option value="KU">Konstitutionsutskottet</option>
-            <option value="KrU">Kulturutskottet</option>
-            <option value="MJU">Miljö- och jordbruksutskottet</option>
-            <option value="NU">Näringsutskottet</option>
-            <option value="SkU">Skatteutskottet</option>
-            <option value="SfU">Socialförsäkringsutskottet</option>
-            <option value="SoU">Socialutskottet</option>
-            <option value="TU">Trafikutskottet</option>
-            <option value="UbU">Utbildningsutskottet</option>
-            <option value="UU">Utrikesutskottet</option>
-            <option value="EUN">EU-nämnden</option>
-        </select>
+    <div class="menu-section">
+        <div class="menu-row">
+            <div>
+                <label>Antal par</label>
+                <select id="pair-count">
+                    <option value="4">8 kort (Lätt)</option>
+                    <option value="8" selected>16 kort (Normal)</option>
+                    <option value="12">24 kort (Utmaning)</option>
+                    <option value="18">36 kort (Expert)</option>
+                </select>
+            </div>
+            <div>
+                <label>Välj Parti</label>
+                <select id="select-parti" onchange="updateGame('parti', this.value)">
+                    <option value="">Alla partier</option>
+                    <option value="S">Socialdemokraterna</option>
+                    <option value="M">Moderaterna</option>
+                    <option value="SD">Sverigedemokraterna</option>
+                    <option value="C">Centerpartiet</option>
+                    <option value="V">Vänsterpartiet</option>
+                    <option value="KD">Kristdemokraterna</option>
+                    <option value="MP">Miljöpartiet</option>
+                    <option value="L">Liberalerna</option>
+                </select>
+            </div>
+            <div>
+                <label>Välj Utskott</label>
+                <select id="select-utskott" onchange="updateGame('org', this.value)">
+                    <option value="">Välj utskott...</option>
+                    <option value="AU">Arbetsmarknadsutskottet</option>
+                    <option value="CU">Civilutskottet</option>
+                    <option value="FiU">Finansutskottet</option>
+                    <option value="FöU">Försvarsutskottet</option>
+                    <option value="JuU">Justitieutskottet</option>
+                    <option value="KU">Konstitutionsutskottet</option>
+                    <option value="KrU">Kulturutskottet</option>
+                    <option value="MJU">Miljö- och jordbruksutskottet</option>
+                    <option value="NU">Näringsutskottet</option>
+                    <option value="SkU">Skatteutskottet</option>
+                    <option value="SfU">Socialförsäkringsutskottet</option>
+                    <option value="SoU">Socialutskottet</option>
+                    <option value="TU">Trafikutskottet</option>
+                    <option value="UbU">Utbildningsutskottet</option>
+                    <option value="UU">Utrikesutskottet</option>
+                    <option value="EUN">EU-nämnden</option>
+                </select>
+            </div>
+            <div>
+                <label>Valkrets</label>
+                <select id="select-valkrets" onchange="updateGame('valkrets', this.value)">
+                    <option value="">Hela Sverige</option>
+                    <option value="Blekinge län">Blekinge</option>
+                    <option value="Dalarnas län">Dalarna</option>
+                    <option value="Gotlands län">Gotland</option>
+                    <option value="Gävleborgs län">Gävleborg</option>
+                    <option value="Hallands län">Halland</option>
+                    <option value="Jämtlands län">Jämtland</option>
+                    <option value="Jönköpings län">Jönköping</option>
+                    <option value="Kalmar län">Kalmar</option>
+                    <option value="Kronobergs län">Kronoberg</option>
+                    <option value="Norrbottens län">Norrbotten</option>
+                    <option value="Skåne läns norra och östra">Skåne N/Ö</option>
+                    <option value="Skåne läns södra">Skåne Södra</option>
+                    <option value="Skåne läns västra">Skåne Västra</option>
+                    <option value="Stockholms län">Stockholms län</option>
+                    <option value="Stockholms kommun">Stockholms stad</option>
+                    <option value="Södermanlands län">Södermanland</option>
+                    <option value="Uppsala län">Uppsala</option>
+                    <option value="Värmlands län">Värmland</option>
+                    <option value="Västerbottens län">Västerbotten</option>
+                    <option value="Västernorrlands län">Västernorrland</option>
+                    <option value="Västmanlands län">Västmanland</option>
+                    <option value="Västra Götalands läns norra">Västra Götaland N</option>
+                    <option value="Västra Götalands läns södra">Västra Götaland S</option>
+                    <option value="Västra Götalands läns västra">Västra Götaland V</option>
+                    <option value="Västra Götalands läns östra">Västra Götaland Ö</option>
+                    <option value="Göteborgs kommun">Göteborg</option>
+                    <option value="Örebro län">Örebro</option>
+                    <option value="Östergötlands län">Östergötland</option>
+                </select>
+            </div>
+        </div>
+        <button onclick="startaSpel()">Slumpa & Starta om</button>
     </div>
-
-    <div id="msg">Välj en kategori för att börja!</div>
-    <div id="game-board" class="grid"></div>
-
-    <script>
-        let firstCard, secondCard;
-        let hasFlippedCard = false;
-        let lockBoard = false;
-        let matchesFound = 0;
-        let totalPairs = 8;
-
-        async function startaSpel(typ, varde) {
-            document.getElementById('msg').innerText = "Hämtar ledamöter...";
-            const url = `https://data.riksdagen.se/personlista/?utformat=json&${typ}=${varde}&rdlstatus=tjanst`;
-            
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                let ledamoter = data.personlista.person;
-
-                // 1. Tvätta datan: Filtrera de som har bild och slumpa
-                ledamoter = ledamoter.filter(p => p.bild_url_192);
-                const urval = ledamoter.sort(() => 0.5 - Math.random()).slice(0, totalPairs);
-
-                // 2. Skapa par och blanda om
-                const spelKort = [...urval, ...urval].sort(() => 0.5 - Math.random());
-                
-                resetGame();
-                renderBoard(spelKort);
-                document.getElementById('msg').innerText = `Hitta paren! (${varde})`;
-            } catch (e) {
-                document.getElementById('msg').innerText = "Kunde inte hämta data. Försök igen!";
-            }
-        }
-
-        function renderBoard(kortLista) {
-            const board = document.getElementById('game-board');
-            board.innerHTML = '';
-            
-            kortLista.forEach(person => {
-                const card = document.createElement('div');
-                card.classList.add('card');
-                card.dataset.id = person.intressent_id;
-        
-                // Skapa strängen för namnet och valkretsen
-                const namn = `${person.tilltalsnamn} ${person.efternamn}`;
-                const valkrets = person.valkrets || "Valkrets saknas";
-        
-                card.innerHTML = `
-                    <div class="card-inner">
-                        <div class="card-front">?</div>
-                        <div class="card-back">
-                            <img src="${person.bild_url_192}" loading="lazy">
-                            <p class="name">${namn}</p>
-                            <p class="info">${person.parti} | ${valkrets}</p>
-                        </div>
-                    </div>
-                `;
-                card.addEventListener('click', flipCard);
-                board.appendChild(card);
-            });
-        }
-
-        function flipCard() {
-            if (lockBoard || this === firstCard) return;
-            this.classList.add('is-flipped');
-
-            if (!hasFlippedCard) {
-                hasFlippedCard = true;
-                firstCard = this;
-                return;
-            }
-
-            secondCard = this;
-            checkForMatch();
-        }
-
-        function checkForMatch() {
-            const isMatch = firstCard.dataset.id === secondCard.dataset.id;
-            if (isMatch) {
-                matchesFound++;
-                disableCards();
-                if (matchesFound === totalPairs) {
-                    document.getElementById('msg').innerText = "Snyggt! Du hittade alla! 🏆";
-                }
-            } else {
-                unflipCards();
-            }
-        }
-
-        function disableCards() {
-            firstCard.removeEventListener('click', flipCard);
-            secondCard.removeEventListener('click', flipCard);
-            resetTurn();
-        }
-
-        function unflipCards() {
-            lockBoard = true;
-            setTimeout(() => {
-                firstCard.classList.remove('is-flipped');
-                secondCard.classList.remove('is-flipped');
-                resetTurn();
-            }, 1000);
-        }
-
-        function resetTurn() {
-            [hasFlippedCard, lockBoard] = [false, false];
-            [firstCard, secondCard] = [null, null];
-        }
-
-        function resetGame() {
-            resetTurn();
-            matchesFound = 0;
-        }
-    </script>
-</body>
-</html>
