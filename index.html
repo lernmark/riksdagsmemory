@@ -11,107 +11,71 @@
         .card-flip { perspective: 1000px; width: 100%; }
         .card-inner { transition: transform 0.5s; transform-style: preserve-3d; position: relative; width: 100%; height: 100%; }
         .is-flipped { transform: rotateY(180deg); }
-        .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 0.4rem; }
+        .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 0.3rem; }
         .card-back { transform: rotateY(180deg); }
         
-        .game-grid {
-            display: grid;
-            gap: 0.4rem;
-            width: 100%;
-            margin: auto;
+        /* Flexbox-center för att centrera gridden vertikalt */
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            height: 100dvh; /* Dynamic viewport height */
         }
 
-        /* Anpassa höjden på korten dynamiskt för att undvika scroll */
-        .card-h { height: clamp(90px, 18vh, 180px); }
+        .game-grid {
+            display: grid;
+            gap: 0.3rem;
+            width: 100%;
+            margin: auto;
+            align-content: center;
+        }
+
+        /* Dynamisk höjd baserat på antal kort */
+        /* Vi räknar med att gridden får ca 70% av skärmhöjden */
+        .cards-4-rows { height: calc(70dvh / 4); }
+        .cards-6-rows { height: calc(70dvh / 6); }
+        .cards-8-rows { height: calc(70dvh / 8); }
     </style>
 </head>
 <body class="bg-slate-950 text-white min-h-screen overflow-hidden select-none">
 
-<div id="app" class="max-w-5xl mx-auto px-2 py-2 flex flex-col h-screen">
+<div id="app" class="game-container px-2 py-2">
     
-    <div class="flex justify-between items-center mb-2 px-1 bg-slate-900 p-2 rounded-lg border border-slate-800">
-        <div class="flex gap-4">
+    <div class="flex justify-between items-center mb-1 px-1 bg-slate-900 p-2 rounded-lg border border-slate-800 shrink-0">
+        <div class="flex gap-3">
             <div class="flex flex-col">
-                <span class="text-[9px] text-slate-500 font-bold uppercase">Tid</span>
-                <span class="font-mono text-blue-400 leading-none">{{ formattedTime }}</span>
+                <span class="text-[8px] text-slate-500 font-bold uppercase">Tid</span>
+                <span class="font-mono text-blue-400 text-sm leading-none">{{ formattedTime }}</span>
             </div>
             <div class="flex flex-col">
-                <span class="text-[9px] text-slate-500 font-bold uppercase">Försök</span>
-                <span class="font-mono text-blue-400 leading-none">{{ moves }}</span>
+                <span class="text-[8px] text-slate-500 font-bold uppercase">Försök</span>
+                <span class="font-mono text-blue-400 text-sm leading-none">{{ moves }}</span>
             </div>
         </div>
-        <div class="text-[11px] font-bold text-slate-400 truncate max-w-[120px]">{{ currentTitle }}</div>
-        <button @click="showMenu = !showMenu" class="bg-blue-600 hover:bg-blue-500 px-4 py-1.5 rounded text-[10px] font-black uppercase transition-colors">
+        <div class="text-[10px] font-bold text-slate-400 truncate px-2 italic">{{ currentTitle }}</div>
+        <button @click="showMenu = !showMenu" class="bg-blue-600 active:scale-95 px-3 py-1.5 rounded text-[9px] font-black uppercase transition-all">
             Inställningar
         </button>
     </div>
 
-    <div v-if="showMenu" class="fixed inset-0 z-[100] bg-slate-950/95 p-4 overflow-y-auto flex items-center">
-        <div class="max-w-md mx-auto bg-white text-slate-900 p-6 rounded-3xl w-full">
-            <h2 class="text-xl font-black mb-4 flex justify-between items-center">
-                Spelinställningar
-                <button @click="showMenu = false" class="text-slate-300 hover:text-slate-500">✕</button>
-            </h2>
-            
-            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Antal par</label>
-            <div class="grid grid-cols-4 gap-2 mb-4 mt-1">
-                <button v-for="n in [4, 6, 8, 12]" @click="settings.pairs = n" 
-                    :class="settings.pairs === n ? 'bg-blue-600 text-white' : 'bg-slate-100'"
-                    class="py-2 rounded-xl font-bold transition-all">{{ n }}</button>
-            </div>
-
-            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Välj Parti</label>
-            <div class="grid grid-cols-4 gap-1 mb-4 mt-1">
-                <button v-for="p in partier" @click="selectFilter('parti', p.kod)"
-                    :class="isActive('parti', p.kod) ? 'bg-blue-600 text-white' : 'bg-slate-100'"
-                    class="py-2 rounded-lg text-xs font-black">{{ p.kod }}</button>
-            </div>
-
-            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Eller Utskott</label>
-            <select @change="e => selectFilter('org', e.target.value)" class="w-full bg-slate-100 p-3 rounded-xl mb-6 text-sm font-medium border-none outline-none">
-                <option value="">Välj utskott...</option>
-                <option v-for="u in utskott" :value="u.kod">{{ u.namn }}</option>
-            </select>
-
-            <button @click="loadGame" :disabled="loading" class="w-full bg-slate-900 text-white font-bold py-4 rounded-2xl shadow-xl active:scale-95 transition-transform">
-                {{ loading ? 'Hämtar...' : 'STARTA SPELET' }}
-            </button>
-        </div>
-    </div>
-
-    <div v-if="gameWon" class="fixed inset-0 z-[110] flex items-center justify-center bg-blue-600 p-6 text-center">
-        <div class="animate-in zoom-in duration-300">
-            <h2 class="text-7xl mb-4">🏆</h2>
-            <h3 class="text-5xl font-black mb-2 italic">MAGISKT!</h3>
-            <p class="text-blue-100 mb-8 font-medium">Du har stenkoll på riksdagen.</p>
-            <div class="grid grid-cols-2 gap-4 mb-10">
-                <div class="bg-blue-700/50 backdrop-blur p-4 rounded-3xl border border-blue-500">
-                    <p class="text-[10px] uppercase font-bold opacity-70">Tid</p>
-                    <p class="text-3xl font-black">{{ formattedTime }}</p>
-                </div>
-                <div class="bg-blue-700/50 backdrop-blur p-4 rounded-3xl border border-blue-500">
-                    <p class="text-[10px] uppercase font-bold opacity-70">Försök</p>
-                    <p class="text-3xl font-black">{{ moves }}</p>
-                </div>
-            </div>
-            <button @click="loadGame" class="bg-white text-blue-600 font-black py-4 px-12 rounded-full text-xl shadow-2xl active:scale-95 transition-transform">Spela igen</button>
-        </div>
-    </div>
-
-    <div class="game-grid flex-grow content-center" 
+    <div class="game-grid flex-grow" 
          :style="{ gridTemplateColumns: `repeat(${gridColumns}, 1fr)` }">
-        <div v-for="(card, index) in cards" :key="index" @click="flipCard(card)" class="card-flip card-h">
+        <div v-for="(card, index) in cards" :key="index" @click="flipCard(card)" 
+             class="card-flip" 
+             :class="rowClass">
             <div class="card-inner" :class="{ 'is-flipped': card.isFlipped || card.isMatched }">
                 <div class="card-front bg-slate-800 flex items-center justify-center border border-slate-700">
-                    <span class="text-slate-700 font-black text-xl italic">RD</span>
+                    <span class="text-slate-700 font-black text-lg italic opacity-50">RD</span>
                 </div>
-                <div class="card-back bg-white p-1 flex flex-col shadow-inner">
-                    <img :src="card.person.bild_url_192" class="w-full h-[65%] object-cover rounded shadow-sm">
-                    <div class="flex-grow flex flex-col justify-center items-center text-center leading-none px-0.5">
-                        <p class="text-[9px] sm:text-[11px] font-black text-slate-900 leading-tight">
-                            {{ card.person.tilltalsnamn }}<br>{{ card.person.efternamn }}
+                <div class="card-back bg-white p-0.5 flex flex-col shadow-inner overflow-hidden text-slate-900">
+                    <img :src="card.person.bild_url_192" class="w-full h-[60%] object-cover rounded-sm">
+                    <div class="flex-grow flex flex-col justify-center items-center text-center leading-[1.1] overflow-hidden px-0.5">
+                        <p class="text-[8px] sm:text-[10px] font-black uppercase truncate w-full">
+                            {{ card.person.tilltalsnamn }}
                         </p>
-                        <p class="text-[7px] sm:text-[8px] text-blue-600 font-bold uppercase mt-0.5">
+                        <p class="text-[8px] sm:text-[10px] font-black uppercase truncate w-full">
+                            {{ card.person.efternamn }}
+                        </p>
+                        <p class="text-[6px] sm:text-[8px] text-blue-600 font-bold mt-0.5">
                             {{ card.person.parti }}
                         </p>
                     </div>
@@ -120,26 +84,47 @@
         </div>
     </div>
 
+    <div v-if="showMenu" class="fixed inset-0 z-[100] bg-slate-950/95 p-4 flex items-center justify-center">
+        <div class="max-w-md w-full bg-white text-slate-900 p-6 rounded-2xl">
+            <h2 class="text-xl font-black mb-4 flex justify-between">Inställningar <button @click="showMenu = false" class="text-slate-300">✕</button></h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">Antal par</label>
+                    <div class="grid grid-cols-4 gap-2 mt-1">
+                        <button v-for="n in [4, 6, 8, 12]" @click="settings.pairs = n" :class="settings.pairs === n ? 'bg-blue-600 text-white' : 'bg-slate-100'" class="py-2 rounded-lg font-bold">{{ n }}</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase">Parti</label>
+                    <div class="grid grid-cols-4 gap-1 mt-1">
+                        <button v-for="p in partier" @click="selectFilter('parti', p.kod)" :class="isActive('parti', p.kod) ? 'bg-blue-600 text-white' : 'bg-slate-100'" class="py-1.5 rounded text-[10px] font-black">{{ p.kod }}</button>
+                    </div>
+                </div>
+                <button @click="loadGame" class="w-full bg-slate-900 text-white font-bold py-4 rounded-xl shadow-lg mt-4 uppercase tracking-widest">{{ loading ? 'Hämtar...' : 'Starta' }}</button>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="gameWon" class="fixed inset-0 z-[110] flex items-center justify-center bg-blue-600 text-center p-6">
+        <div>
+            <h2 class="text-6xl mb-4 italic font-black text-white">KLAR!</h2>
+            <div class="bg-blue-700/50 p-6 rounded-3xl border border-blue-400 mb-8 space-y-4">
+                <div><p class="text-[10px] uppercase font-bold opacity-70">Tid</p><p class="text-4xl font-black text-white">{{ formattedTime }}</p></div>
+                <div><p class="text-[10px] uppercase font-bold opacity-70">Försök</p><p class="text-4xl font-black text-white">{{ moves }}</p></div>
+            </div>
+            <button @click="loadGame" class="bg-white text-blue-600 font-black py-4 px-12 rounded-full text-xl shadow-2xl">Igen!</button>
+        </div>
+    </div>
 </div>
 
 <script>
 const { createApp } = Vue;
-
 createApp({
     data() {
         return {
-            loading: false,
-            showMenu: true,
-            gameWon: false,
-            cards: [],
-            flippedCards: [],
-            time: 0,
-            moves: 0,
-            timerInterval: null,
-            currentTitle: 'Välj kategori',
-            settings: { pairs: 6, filterType: 'parti', filterValue: 'S' },
+            loading: false, showMenu: true, gameWon: false, cards: [], flippedCards: [], time: 0, moves: 0, timerInterval: null, currentTitle: 'Välj kategori',
+            settings: { pairs: 12, filterType: 'parti', filterValue: 'S' },
             partier: [{kod:'S'},{kod:'M'},{kod:'SD'},{kod:'C'},{kod:'V'},{kod:'KD'},{kod:'MP'},{kod:'L'}],
-            utskott: [{kod:'FiU',namn:'Finansutskottet'},{kod:'JuU',namn:'Justitieutskottet'},{kod:'FöU',namn:'Försvarsutskottet'},{kod:'UU',namn:'Utrikesutskottet'},{kod:'KrU',namn:'Kulturutskottet'},{kod:'SoU',namn:'Socialutskottet'}]
         }
     },
     computed: {
@@ -150,81 +135,48 @@ createApp({
         },
         gridColumns() {
             const total = this.cards.length;
-            if (total === 0) return 3;
-            // Mobilvy
-            if (window.innerWidth < 640) {
-                if (total === 8) return 2;
-                if (total <= 16) return 3;
-                return 4;
-            }
-            // Desktopvy
-            if (total <= 12) return 4;
-            if (total === 16) return 4;
-            return 6;
+            if (window.innerWidth < 640) return total > 12 ? 4 : 3;
+            return total > 12 ? 6 : 4;
+        },
+        rowClass() {
+            const total = this.cards.length;
+            const cols = this.gridColumns;
+            const rows = Math.ceil(total / cols);
+            if (rows <= 4) return 'cards-4-rows';
+            if (rows <= 6) return 'cards-6-rows';
+            return 'cards-8-rows';
         }
     },
     methods: {
-        selectFilter(type, value) {
-            this.settings.filterType = type;
-            this.settings.filterValue = value;
-        },
-        isActive(type, value) {
-            return this.settings.filterType === type && this.settings.filterValue === value;
-        },
+        selectFilter(t, v) { this.settings.filterType = t; this.settings.filterValue = v; },
+        isActive(t, v) { return this.settings.filterType === t && this.settings.filterValue === v; },
         async loadGame() {
-            this.loading = true;
-            this.gameWon = false;
-            this.stopTimer();
-            this.time = 0;
-            this.moves = 0;
-            
+            this.loading = true; this.gameWon = false; this.stopTimer(); this.time = 0; this.moves = 0;
             try {
                 const url = `https://data.riksdagen.se/personlista/?utformat=json&${this.settings.filterType}=${encodeURIComponent(this.settings.filterValue)}&rdlstatus=tjanst`;
-                const response = await fetch(url);
-                const data = await response.json();
+                const res = await fetch(url);
+                const data = await res.json();
                 let list = data.personlista.person.filter(p => p.bild_url_192);
-                
-                const selection = list.sort(() => 0.5 - Math.random()).slice(0, this.settings.pairs);
-                this.cards = [...selection, ...selection]
-                    .map((p, i) => ({ id: i, pId: p.intressent_id, person: p, isFlipped: false, isMatched: false }))
-                    .sort(() => 0.5 - Math.random());
-                
-                this.currentTitle = this.settings.filterValue;
-                this.showMenu = false;
-            } catch (e) { alert("Kunde inte hämta data."); }
-            finally { this.loading = false; }
+                const sel = list.sort(() => 0.5 - Math.random()).slice(0, this.settings.pairs);
+                this.cards = [...sel, ...sel].map((p, i) => ({ id: i, pId: p.intressent_id, person: p, isFlipped: false, isMatched: false })).sort(() => 0.5 - Math.random());
+                this.currentTitle = this.settings.filterValue; this.showMenu = false;
+            } catch (e) { alert("Datafel"); } finally { this.loading = false; }
         },
-        flipCard(card) {
-            if (this.flippedCards.length === 2 || card.isFlipped || card.isMatched) return;
-            if (this.time === 0 && !this.timerInterval) this.startTimer();
-
-            card.isFlipped = true;
-            this.flippedCards.push(card);
-
+        flipCard(c) {
+            if (this.flippedCards.length === 2 || c.isFlipped || c.isMatched) return;
+            if (this.time === 0 && !this.timerInterval) this.timerInterval = setInterval(() => { this.time++ }, 1000);
+            c.isFlipped = true; this.flippedCards.push(c);
             if (this.flippedCards.length === 2) {
                 this.moves++;
                 if (this.flippedCards[0].pId === this.flippedCards[1].pId) {
-                    this.flippedCards.forEach(c => c.isMatched = true);
-                    this.flippedCards = [];
-                    this.checkWin();
-                } else {
-                    setTimeout(() => {
-                        this.flippedCards.forEach(c => c.isFlipped = false);
-                        this.flippedCards = [];
-                    }, 800);
-                }
+                    this.flippedCards.forEach(x => x.isMatched = true); this.flippedCards = [];
+                    if (this.cards.every(x => x.isMatched)) { this.stopTimer(); setTimeout(() => { this.gameWon = true; this.celebrate(); }, 500); }
+                } else { setTimeout(() => { this.flippedCards.forEach(x => x.isFlipped = false); this.flippedCards = []; }, 800); }
             }
         },
-        startTimer() { this.timerInterval = setInterval(() => { this.time++ }, 1000); },
         stopTimer() { clearInterval(this.timerInterval); this.timerInterval = null; },
-        checkWin() {
-            if (this.cards.every(c => c.isMatched)) {
-                this.stopTimer();
-                setTimeout(() => { this.gameWon = true; this.celebrate(); }, 500);
-            }
-        },
         celebrate() {
-            const end = Date.now() + 3000;
+            const end = Date.now() + 2000;
             (function frame() {
                 confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#005293', '#febc11'] });
                 confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#005293', '#febc11'] });
