@@ -2,89 +2,96 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Riksdags-Memory Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         .card-flip { perspective: 1000px; }
         .card-inner { transition: transform 0.6s; transform-style: preserve-3d; position: relative; width: 100%; height: 100%; }
         .is-flipped { transform: rotateY(180deg); }
-        .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 0.75rem; }
+        .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 0.5rem; }
         .card-back { transform: rotateY(180deg); }
-        /* Snygg scrollbar för utskottslistan */
-        .custom-scroll::-webkit-scrollbar { width: 4px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        /* Mobil-optimering: Försök trycka ihop spelplanen */
+        @media (max-height: 700px) {
+            .card-flip { height: 120px !important; }
+            .card-back img { height: 70px !important; }
+        }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900 min-h-screen pb-20">
+<body class="bg-slate-900 text-white min-h-screen overflow-x-hidden">
 
-<div id="app" class="max-w-5xl mx-auto px-4 py-8">
-    <header class="text-center mb-8">
-        <h1 class="text-4xl font-extrabold text-slate-800 mb-2 tracking-tight">🏛️ Riksdags-Memory</h1>
-        <p class="text-slate-500 italic">Välj ett parti eller ett utskott för att börja spela</p>
-    </header>
-
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8">
-        
-        <div class="mb-6">
-            <h2 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-3">1. Välj svårighetsgrad</h2>
-            <div class="flex gap-2">
-                <button v-for="n in [4, 8, 12, 18]" @click="settings.pairs = n" 
-                    :class="settings.pairs === n ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'"
-                    class="px-4 py-2 rounded-lg font-bold transition-all flex-1">
-                    {{ n }} par
-                </button>
+<div id="app" class="max-w-5xl mx-auto px-2 py-4">
+    
+    <div class="flex justify-between items-center mb-4 px-2">
+        <h1 class="text-xl font-black tracking-tighter">🏛️ RD-MEMORY</h1>
+        <div class="flex gap-4 items-center">
+            <div class="bg-slate-800 px-3 py-1 rounded-full font-mono text-blue-400 border border-slate-700">
+                {{ formattedTime }}
             </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div>
-                <h2 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-3">2. Välj Parti</h2>
-                <div class="grid grid-cols-4 gap-2">
-                    <button v-for="p in partier" @click="selectFilter('parti', p.kod)"
-                        :class="isActive('parti', p.kod) ? 'ring-2 ring-blue-600 bg-blue-50' : 'bg-white border border-slate-200'"
-                        class="p-2 rounded-lg hover:border-blue-400 transition-all text-center">
-                        <span class="block font-black text-lg">{{ p.kod }}</span>
-                        <span class="text-[10px] text-slate-500 uppercase">{{ p.namn }}</span>
-                    </button>
-                </div>
-            </div>
-
-            <div>
-                <h2 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-3">Eller välj Utskott</h2>
-                <div class="h-[180px] overflow-y-auto custom-scroll pr-2 space-y-1">
-                    <button v-for="u in utskott" @click="selectFilter('org', u.kod)"
-                        :class="isActive('org', u.kod) ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
-                        class="w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                        {{ u.namn }}
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div class="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between">
-            <div class="text-sm text-slate-500">
-                Valt: <span class="font-bold text-slate-800">{{ currentLabel }}</span>
-            </div>
-            <button @click="loadGame" :disabled="loading"
-                    class="bg-slate-900 hover:bg-black text-white font-bold py-3 px-10 rounded-xl transition-all shadow-lg active:scale-95 disabled:opacity-50">
-                {{ loading ? 'Hämtar...' : 'STARTA SPEL' }}
+            <button @click="showMenu = !showMenu" class="bg-slate-700 p-2 rounded-lg text-xs uppercase font-bold">
+                {{ showMenu ? 'Stäng' : 'Inställningar' }}
             </button>
         </div>
     </div>
 
-    <div v-if="cards.length" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 animate-in fade-in duration-500">
-        <div v-for="(card, index) in cards" :key="index" @click="flipCard(card)" class="card-flip h-56 cursor-pointer group">
-            <div class="card-inner shadow-sm" :class="{ 'is-flipped': card.isFlipped || card.isMatched }">
-                <div class="card-front bg-slate-800 flex flex-col items-center justify-center text-white border-2 border-slate-700">
-                    <span class="text-4xl opacity-20 italic font-black">RD</span>
+    <transition enter-active-class="transition ease-out duration-200" enter-from-class="opacity-0 -translate-y-4" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition ease-in duration-150" leave-from-class="opacity-100 translate-y-0" leave-to-class="opacity-0 -translate-y-4">
+        <div v-if="showMenu" class="bg-white text-slate-900 p-4 rounded-2xl shadow-2xl mb-6 z-50 relative">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h2 class="text-xs font-bold uppercase text-slate-400 mb-2">Svårighetsgrad</h2>
+                    <div class="flex gap-1">
+                        <button v-for="n in [4, 6, 8, 12]" @click="settings.pairs = n" 
+                            :class="settings.pairs === n ? 'bg-blue-600 text-white' : 'bg-slate-100'"
+                            class="flex-1 py-2 rounded-md font-bold text-sm transition-all">
+                            {{ n*2 }}
+                        </button>
+                    </div>
                 </div>
-                <div class="card-back bg-white p-2 border border-slate-200 flex flex-col items-center shadow-inner">
-                    <img :src="card.person.bild_url_192" class="w-full h-36 object-cover rounded-lg mb-2 shadow-sm">
-                    <div class="text-center">
-                        <p class="text-[11px] font-bold text-slate-800 leading-tight mb-1">{{ card.person.tilltalsnamn }} {{ card.person.efternamn }}</p>
-                        <p class="text-[9px] text-blue-600 font-bold uppercase tracking-tighter">{{ card.person.parti }} | {{ card.person.valkrets }}</p>
+                <div>
+                    <h2 class="text-xs font-bold uppercase text-slate-400 mb-2">Kategori</h2>
+                    <div class="flex flex-wrap gap-1">
+                        <button v-for="p in partier" @click="selectFilter('parti', p.kod)"
+                            :class="isActive('parti', p.kod) ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'"
+                            class="px-3 py-1 rounded text-xs font-bold">
+                            {{ p.kod }}
+                        </button>
+                        <select @change="e => selectFilter('org', e.target.value)" class="bg-slate-100 text-xs font-bold p-1 rounded mt-1 w-full text-slate-600">
+                            <option value="">Välj Utskott...</option>
+                            <option v-for="u in utskott" :value="u.kod">{{ u.namn }}</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <button @click="loadGame" :disabled="loading" class="w-full mt-4 bg-slate-900 text-white font-bold py-3 rounded-xl hover:bg-black transition-all">
+                {{ loading ? 'Hämtar ledamöter...' : 'STARTA SPELET' }}
+            </button>
+        </div>
+    </transition>
+
+    <div v-if="gameWon" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/90 backdrop-blur-sm p-4 text-center">
+        <div class="bg-white text-slate-900 p-8 rounded-3xl shadow-2xl max-w-sm w-full animate-bounce-short">
+            <h2 class="text-4xl mb-2">🏆</h2>
+            <h3 class="text-2xl font-black mb-1">Snyggt jobbat!</h3>
+            <p class="text-slate-500 mb-4 text-sm">Du hittade alla par på</p>
+            <div class="text-4xl font-mono font-black text-blue-600 mb-6">{{ formattedTime }}</div>
+            <button @click="loadGame" class="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-200">Spela igen</button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 pb-10">
+        <div v-for="(card, index) in cards" :key="index" @click="flipCard(card)" class="card-flip h-40 sm:h-52 cursor-pointer">
+            <div class="card-inner shadow-xl" :class="{ 'is-flipped': card.isFlipped || card.isMatched }">
+                <div class="card-front bg-slate-800 flex items-center justify-center text-slate-700 border border-slate-700">
+                    <span class="text-2xl font-black">RD</span>
+                </div>
+                <div class="card-back bg-white p-1 flex flex-col items-center">
+                    <img :src="card.person.bild_url_192" class="w-full h-24 sm:h-32 object-cover rounded-md mb-1 bg-slate-100 shadow-inner">
+                    <div class="text-center w-full px-1">
+                        <p class="text-[10px] sm:text-[11px] font-black text-slate-800 leading-tight truncate">{{ card.person.tilltalsnamn }}</p>
+                        <p class="text-[8px] sm:text-[9px] text-blue-600 font-bold uppercase tracking-tighter truncate">{{ card.person.parti }}</p>
                     </div>
                 </div>
             </div>
@@ -99,32 +106,22 @@ createApp({
     data() {
         return {
             loading: false,
-            message: '',
+            showMenu: true,
+            gameWon: false,
             cards: [],
             flippedCards: [],
-            settings: { pairs: 8, filterType: 'parti', filterValue: 'S' },
-            partier: [
-                { kod: 'S', namn: 'Socialdem' }, { kod: 'M', namn: 'Moderaterna' },
-                { kod: 'SD', namn: 'Sverigedem' }, { kod: 'C', namn: 'Centerp' },
-                { kod: 'V', namn: 'Vänsterp' }, { kod: 'KD', namn: 'Kristdem' },
-                { kod: 'MP', namn: 'Miljöpartiet' }, { kod: 'L', namn: 'Liberalerna' }
-            ],
-            utskott: [
-                { kod: 'AU', namn: 'Arbetsmarknadsutskottet' }, { kod: 'CU', namn: 'Civilutskottet' },
-                { kod: 'FiU', namn: 'Finansutskottet' }, { kod: 'FöU', namn: 'Försvarsutskottet' },
-                { kod: 'JuU', namn: 'Justitieutskottet' }, { kod: 'KU', namn: 'Konstitutionsutskottet' },
-                { kod: 'KrU', namn: 'Kulturutskottet' }, { kod: 'MJU', namn: 'Miljö- & jordbruksutskottet' },
-                { kod: 'NU', namn: 'Näringsutskottet' }, { kod: 'SkU', namn: 'Skatteutskottet' },
-                { kod: 'SfU', namn: 'Socialförsäkringsutskottet' }, { kod: 'SoU', namn: 'Socialutskottet' },
-                { kod: 'TU', namn: 'Trafikutskottet' }, { kod: 'UbU', namn: 'Utbildningsutskottet' },
-                { kod: 'UU', namn: 'Utrikesutskottet' }, { kod: 'EUN', namn: 'EU-nämnden' }
-            ]
+            time: 0,
+            timerInterval: null,
+            settings: { pairs: 6, filterType: 'parti', filterValue: 'S' },
+            partier: [{kod:'S'},{kod:'M'},{kod:'SD'},{kod:'C'},{kod:'V'},{kod:'KD'},{kod:'MP'},{kod:'L'}],
+            utskott: [{kod:'FiU',namn:'Finans'},{kod:'JuU',namn:'Justitie'},{kod:'FöU',namn:'Försvar'},{kod:'UU',namn:'Utrikes'},{kod:'KrU',namn:'Kultur'},{kod:'SoU',namn:'Social'}]
         }
     },
     computed: {
-        currentLabel() {
-            if (this.settings.filterType === 'parti') return 'Parti: ' + this.settings.filterValue;
-            return 'Utskott: ' + this.settings.filterValue;
+        formattedTime() {
+            const m = Math.floor(this.time / 60);
+            const s = this.time % 60;
+            return `${m}:${s < 10 ? '0' : ''}${s}`;
         }
     },
     methods: {
@@ -137,27 +134,39 @@ createApp({
         },
         async loadGame() {
             this.loading = true;
-            this.cards = [];
+            this.gameWon = false;
+            this.stopTimer();
+            this.time = 0;
+            
             try {
                 const url = `https://data.riksdagen.se/personlista/?utformat=json&${this.settings.filterType}=${encodeURIComponent(this.settings.filterValue)}&rdlstatus=tjanst`;
                 const response = await fetch(url);
                 const data = await response.json();
                 let list = data.personlista.person.filter(p => p.bild_url_192);
+                
                 const selection = list.sort(() => 0.5 - Math.random()).slice(0, this.settings.pairs);
                 this.cards = [...selection, ...selection]
                     .map((p, i) => ({ id: i, pId: p.intressent_id, person: p, isFlipped: false, isMatched: false }))
                     .sort(() => 0.5 - Math.random());
-            } catch (e) { alert("Fel vid hämtning!"); }
+                
+                this.showMenu = false; // Kollapsa menyn
+            } catch (e) { alert("Kunde inte hämta ledamöter."); }
             finally { this.loading = false; }
         },
         flipCard(card) {
             if (this.flippedCards.length === 2 || card.isFlipped || card.isMatched) return;
+            
+            // Starta timer vid första klicket
+            if (this.time === 0 && !this.timerInterval) this.startTimer();
+
             card.isFlipped = true;
             this.flippedCards.push(card);
+
             if (this.flippedCards.length === 2) {
                 if (this.flippedCards[0].pId === this.flippedCards[1].pId) {
                     this.flippedCards.forEach(c => c.isMatched = true);
                     this.flippedCards = [];
+                    this.checkWin();
                 } else {
                     setTimeout(() => {
                         this.flippedCards.forEach(c => c.isFlipped = false);
@@ -165,9 +174,20 @@ createApp({
                     }, 1000);
                 }
             }
-        }
-    }
-}).mount('#app');
-</script>
-</body>
-</html>
+        },
+        startTimer() {
+            this.timerInterval = setInterval(() => { this.time++ }, 1000);
+        },
+        stopTimer() {
+            clearInterval(this.timerInterval);
+            this.timerInterval = null;
+        },
+        checkWin() {
+            if (this.cards.every(c => c.isMatched)) {
+                this.stopTimer();
+                this.gameWon = true;
+                this.celebrate();
+            }
+        },
+        celebrate() {
+            const duration = 3 * 10
