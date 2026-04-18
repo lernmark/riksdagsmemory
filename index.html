@@ -6,7 +6,6 @@
     <title>RD-Memory</title>
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏛️</text></svg>">
-    
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#020617">
 
@@ -19,36 +18,187 @@
         .card-inner { transition: transform 0.5s; transform-style: preserve-3d; position: relative; width: 100%; height: 100%; }
         .is-flipped { transform: rotateY(180deg); }
         .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 0.3rem; }
-        .card-back { transform: rotateY(180deg); background: #fff; }
+        .card-back { transform: rotateY(180deg); background: #fff; color: #0f172a; }
         
         .game-container { display: flex; flex-direction: column; height: 100dvh; }
         .game-grid { display: grid; gap: 0.3rem; width: 100%; margin: auto; align-content: center; }
 
-        /* OPTIMERADE BILDER: object-contain för att inte kapa huvuden */
+        /* Bild-fix: Contain för att se hela ansiktet, top-position för att prioritera huvudet */
         .card-back img { 
             width: 100%; 
-            height: 65%; 
+            height: 60%; 
             object-fit: contain; 
-            background: #f8fafc; /* Ljusgrå bakgrund om bilden inte täcker allt */
+            object-position: top;
+            background: #f8fafc;
             border-bottom: 1px solid #e2e8f0;
         }
 
+        /* Dynamiska höjder för att motverka scroll */
         .cards-4-rows { height: calc(75dvh / 4); }
         .cards-6-rows { height: calc(75dvh / 6); }
         .cards-8-rows { height: calc(75dvh / 8); }
     </style>
 </head>
 <body class="bg-slate-950 text-white min-h-screen overflow-hidden select-none">
-    <div id="app" class="game-container px-2 py-2">
-        </div>
 
-    <script>
-        // Registrera Service Worker för PWA
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW fail', err));
-            });
+<div id="app" class="game-container px-2 py-2" v-cloak>
+    
+    <div class="flex justify-between items-center mb-1 px-1 bg-slate-900 p-2 rounded-lg border border-slate-800 shrink-0">
+        <div class="flex gap-3">
+            <div class="flex flex-col">
+                <span class="text-[8px] text-slate-500 font-bold uppercase">Tid</span>
+                <span class="font-mono text-blue-400 text-sm leading-none">{{ formattedTime }}</span>
+            </div>
+            <div class="flex flex-col">
+                <span class="text-[8px] text-slate-500 font-bold uppercase">Försök</span>
+                <span class="font-mono text-blue-400 text-sm leading-none">{{ moves }}</span>
+            </div>
+        </div>
+        <div class="text-[10px] font-bold text-slate-400 truncate px-2 italic uppercase tracking-tighter">{{ currentTitle }}</div>
+        <button @click="showMenu = !showMenu" class="bg-blue-600 active:scale-95 px-3 py-1.5 rounded text-[9px] font-black uppercase transition-all shadow-lg">
+            Meny
+        </button>
+    </div>
+
+    <div class="game-grid flex-grow" :style="{ gridTemplateColumns: `repeat(${gridColumns}, 1fr)` }">
+        <div v-for="(card, index) in cards" :key="index" @click="flipCard(card)" class="card-flip" :class="rowClass">
+            <div class="card-inner" :class="{ 'is-flipped': card.isFlipped || card.isMatched }">
+                <div class="card-front bg-slate-800 flex items-center justify-center border border-slate-700">
+                    <span class="text-slate-700 font-black text-lg italic opacity-50">RD</span>
+                </div>
+                <div class="card-back p-0.5 flex flex-col shadow-inner overflow-hidden border border-white">
+                    <img :src="card.person.bild_url_192" class="pointer-events-none">
+                    <div class="flex-grow flex flex-col justify-center items-center text-center leading-[1.1] overflow-hidden px-0.5">
+                        <p class="text-[8px] sm:text-[10px] font-black uppercase truncate w-full">
+                            {{ card.person.tilltalsnamn }}
+                        </p>
+                        <p class="text-[8px] sm:text-[10px] font-black uppercase truncate w-full">
+                            {{ card.person.efternamn }}
+                        </p>
+                        <p class="text-[7px] font-bold text-blue-600 mt-0.5">
+                            {{ card.person.parti }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="showMenu" class="fixed inset-0 z-[100] bg-slate-950/95 p-4 flex items-center justify-center">
+        <div class="max-w-md w-full bg-white text-slate-900 p-6 rounded-2xl shadow-2xl">
+            <h2 class="text-xl font-black mb-4 flex justify-between items-center text-slate-800 uppercase tracking-tighter">
+                Inställningar 
+                <button @click="showMenu = false" class="text-slate-300 hover:text-slate-500">✕</button>
+            </h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Antal par</label>
+                    <div class="grid grid-cols-4 gap-2 mt-1">
+                        <button v-for="n in [4, 6, 8, 12]" @click="settings.pairs = n" :class="settings.pairs === n ? 'bg-blue-600 text-white' : 'bg-slate-100'" class="py-2 rounded-lg font-bold transition-all">{{ n }}</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Välj Parti</label>
+                    <div class="grid grid-cols-4 gap-1 mt-1">
+                        <button v-for="p in partier" @click="selectFilter('parti', p.kod)" :class="isActive('parti', p.kod) ? 'bg-blue-600 text-white' : 'bg-slate-100'" class="py-1.5 rounded text-[10px] font-black uppercase">{{ p.kod }}</button>
+                    </div>
+                </div>
+                <button @click="loadGame" :disabled="loading" class="w-full bg-slate-900 text-white font-bold py-4 rounded-xl shadow-lg mt-4 uppercase tracking-widest active:scale-95 transition-all">
+                    {{ loading ? 'Hämtar...' : 'Starta Spelet' }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="gameWon" class="fixed inset-0 z-[110] flex items-center justify-center bg-blue-600 text-center p-6">
+        <div class="max-w-sm">
+            <h2 class="text-6xl mb-4 italic font-black text-white">KLAR!</h2>
+            <div class="bg-blue-700/50 p-6 rounded-3xl border border-blue-400 mb-8 space-y-4">
+                <div><p class="text-[10px] uppercase font-bold opacity-70">Tid</p><p class="text-4xl font-black text-white">{{ formattedTime }}</p></div>
+                <div><p class="text-[10px] uppercase font-bold opacity-70">Försök</p><p class="text-4xl font-black text-white">{{ moves }}</p></div>
+            </div>
+            <button @click="loadGame" class="bg-white text-blue-600 font-black py-4 px-12 rounded-full text-xl shadow-2xl active:scale-95 transition-all">SPELA IGEN</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const { createApp } = Vue;
+createApp({
+    data() {
+        return {
+            loading: false, showMenu: true, gameWon: false, cards: [], flippedCards: [], time: 0, moves: 0, timerInterval: null, currentTitle: 'Memory',
+            settings: { pairs: 8, filterType: 'parti', filterValue: 'S' },
+            partier: [{kod:'S'},{kod:'M'},{kod:'SD'},{kod:'C'},{kod:'V'},{kod:'KD'},{kod:'MP'},{kod:'L'}],
         }
-    </script>
+    },
+    computed: {
+        formattedTime() {
+            const m = Math.floor(this.time / 60);
+            const s = this.time % 60;
+            return `${m}:${s < 10 ? '0' : ''}${s}`;
+        },
+        gridColumns() {
+            const total = this.cards.length;
+            if (window.innerWidth < 640) return total > 12 ? 4 : 3;
+            return total > 12 ? 6 : 4;
+        },
+        rowClass() {
+            const total = this.cards.length;
+            const rows = Math.ceil(total / this.gridColumns);
+            if (rows <= 4) return 'cards-4-rows';
+            if (rows <= 6) return 'cards-6-rows';
+            return 'cards-8-rows';
+        }
+    },
+    methods: {
+        selectFilter(t, v) { this.settings.filterType = t; this.settings.filterValue = v; },
+        isActive(t, v) { return this.settings.filterType === t && this.settings.filterValue === v; },
+        async loadGame() {
+            this.loading = true; this.gameWon = false; this.stopTimer(); this.time = 0; this.moves = 0; this.cards = [];
+            try {
+                const url = `https://data.riksdagen.se/personlista/?utformat=json&${this.settings.filterType}=${encodeURIComponent(this.settings.filterValue)}&rdlstatus=tjanst`;
+                const res = await fetch(url);
+                const data = await res.json();
+                let list = data.personlista.person.filter(p => p.bild_url_192);
+                const sel = list.sort(() => 0.5 - Math.random()).slice(0, this.settings.pairs);
+                this.cards = [...sel, ...sel].map((p, i) => ({ id: i, pId: p.intressent_id, person: p, isFlipped: false, isMatched: false })).sort(() => 0.5 - Math.random());
+                this.currentTitle = this.settings.filterValue; this.showMenu = false;
+            } catch (e) { alert("Kunde inte hämta data från Riksdagen."); } finally { this.loading = false; }
+        },
+        flipCard(c) {
+            if (this.flippedCards.length === 2 || c.isFlipped || c.isMatched || this.loading) return;
+            if (this.time === 0 && !this.timerInterval) this.timerInterval = setInterval(() => { this.time++ }, 1000);
+            c.isFlipped = true; this.flippedCards.push(c);
+            if (this.flippedCards.length === 2) {
+                this.moves++;
+                if (this.flippedCards[0].pId === this.flippedCards[1].pId) {
+                    this.flippedCards.forEach(x => x.isMatched = true); 
+                    this.flippedCards = [];
+                    if (this.cards.every(x => x.isMatched)) { this.stopTimer(); setTimeout(() => { this.gameWon = true; this.celebrate(); }, 500); }
+                } else { 
+                    setTimeout(() => { this.flippedCards.forEach(x => x.isFlipped = false); this.flippedCards = []; }, 800); 
+                }
+            }
+        },
+        stopTimer() { clearInterval(this.timerInterval); this.timerInterval = null; },
+        celebrate() {
+            const end = Date.now() + 2500;
+            (function frame() {
+                confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#005293', '#febc11'] });
+                confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#005293', '#febc11'] });
+                if (Date.now() < end) requestAnimationFrame(frame);
+            }());
+        }
+    }
+}).mount('#app');
+
+// Service Worker för PWA
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW fail', err));
+    });
+}
+</script>
 </body>
 </html>
