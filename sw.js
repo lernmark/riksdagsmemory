@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rd-memory-v1';
+const CACHE_NAME = 'rd-memory-v2';
 // Vi cachar bara lokala filer till att börja med för att undvika "Failed to fetch"
 const ASSETS = [
   './',
