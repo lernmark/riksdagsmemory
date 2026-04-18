@@ -190,4 +190,17 @@ createApp({
             }
         },
         celebrate() {
-            const duration = 3 * 10
+            const duration = 3 * 1000;
+            const end = Date.now() + duration;
+
+            (function frame() {
+                confetti({ particleCount: 3, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#005293', '#febc11'] });
+                confetti({ particleCount: 3, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#005293', '#febc11'] });
+                if (Date.now() < end) requestAnimationFrame(frame);
+            }());
+        }
+    }
+}).mount('#app');
+</script>
+</body>
+</html>
