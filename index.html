@@ -7,7 +7,7 @@
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏛️</text></svg>">
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#020617">
+    <meta name="theme-color" content="#183c32">
     <meta name="apple-mobile-web-app-capable" content="yes">
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -15,70 +15,206 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     
     <style>
-        [v-cloak] { display: none; }
-        .card-flip { perspective: 1000px; width: 100%; }
-        .card-inner { transition: transform 0.5s; transform-style: preserve-3d; position: relative; width: 100%; height: 100%; border-radius: 0.4rem; }
-        .is-flipped { transform: rotateY(180deg); }
-        .is-matched { border: 2px solid #fbbf24; box-shadow: 0 0 10px rgba(251, 191, 36, 0.3); }
-        
-        .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 0.4rem; overflow: hidden; }
-        .card-back { transform: rotateY(180deg); background: #fff; color: #0f172a; border: 1px solid #e2e8f0; }
-        
-        .game-container { display: flex; flex-direction: column; height: 100dvh; }
-        .game-grid { display: grid; gap: 0.3rem; width: 100%; margin: auto; align-content: center; }
-
-        .card-back img { 
-            width: 100%; 
-            height: 60%; 
-            object-fit: contain; 
-            object-position: top;
-            background: #f8fafc;
-            border-bottom: 1px solid #f1f5f9;
+        :root {
+            color-scheme: light;
+            --ivory: #f2ecdc;
+            --paper: #fbf8ef;
+            --ink: #26352e;
+            --green: #183c32;
+            --green-light: #285445;
+            --brass: #ad8747;
+            --brass-light: #d7bd82;
+            --muted: #827967;
         }
 
-        /* Dynamiska höjder för att motverka scroll */
-        .cards-4-rows { height: calc(75dvh / 4); }
-        .cards-6-rows { height: calc(75dvh / 6); }
-        .cards-8-rows { height: calc(75dvh / 8); }
+        [v-cloak] { display: none; }
+        body {
+            color: var(--ink);
+            background-color: var(--ivory);
+            background-image: radial-gradient(ellipse at 50% 45%, rgba(255,255,255,.55), transparent 70%), repeating-linear-gradient(0deg, transparent, transparent 5px, rgba(91,74,45,.018) 6px);
+            font-family: Georgia, "Times New Roman", serif;
+        }
+
+        button { font-family: inherit; }
+        .game-container { display: flex; flex-direction: column; height: 100dvh; max-width: 1000px; margin: 0 auto; padding: 14px 18px; }
+        .theme-header {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-shrink: 0;
+            padding: 12px 16px;
+            color: var(--paper);
+            background: var(--green);
+            border: 1px solid var(--brass);
+            border-radius: 3px;
+            box-shadow: 0 4px 14px rgba(37,45,34,.15), inset 0 0 0 3px var(--green), inset 0 0 0 4px rgba(215,189,130,.42);
+        }
+        .theme-brand { min-width: 0; }
+        .theme-kicker { color: var(--brass-light); font: 700 8px/1.2 Arial, sans-serif; letter-spacing: .24em; text-transform: uppercase; }
+        .theme-title { margin-top: 3px; color: var(--paper); font-size: clamp(17px, 4vw, 23px); font-weight: 400; letter-spacing: .035em; line-height: 1; }
+        .theme-title span { color: var(--brass-light); font-style: italic; }
+        .theme-stats { display: flex; gap: clamp(10px, 3vw, 26px); align-items: center; }
+        .theme-stat { display: flex; flex-direction: column; gap: 3px; }
+        .theme-stat-label { color: #c6c2ac; font: 700 8px/1 Arial, sans-serif; letter-spacing: .16em; text-transform: uppercase; }
+        .theme-stat-value { color: var(--brass-light); font: 18px/1.1 Georgia, serif; font-variant-numeric: tabular-nums; }
+        .theme-party { max-width: 70px; color: #e7dfc9; font: italic 14px Georgia, serif; }
+        .theme-button {
+            flex-shrink: 0;
+            padding: 9px 13px;
+            color: var(--green);
+            background: var(--brass-light);
+            border: 1px solid #ead9aa;
+            border-radius: 2px;
+            font: 700 9px Arial, sans-serif;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            transition: background .2s, transform .2s;
+        }
+        .theme-button:hover { background: #ead9aa; }
+        .theme-button:active { transform: translateY(1px); }
+        .game-grid {
+            display: grid;
+            gap: clamp(5px, 1.2vw, 10px);
+            width: 100%;
+            margin: auto;
+            padding: clamp(9px, 2vw, 18px);
+            align-content: center;
+            background: rgba(251,248,239,.58);
+            border: 1px solid rgba(173,135,71,.52);
+            box-shadow: inset 0 0 0 4px rgba(251,248,239,.55), 0 5px 18px rgba(60,49,32,.06);
+        }
+        .card-flip { width: 100%; perspective: 1000px; }
+        .card-inner { position: relative; width: 100%; height: 100%; border-radius: 2px; transform-style: preserve-3d; transition: transform .5s; }
+        .is-flipped { transform: rotateY(180deg); }
+        .is-matched { border: 2px solid var(--brass); box-shadow: 0 0 12px rgba(173,135,71,.45); }
+        .card-front, .card-back { position: absolute; width: 100%; height: 100%; overflow: hidden; border-radius: 2px; backface-visibility: hidden; }
+        .card-front {
+            color: var(--brass-light);
+            background-color: var(--green);
+            background-image: repeating-linear-gradient(90deg, transparent 0, transparent 17px, rgba(255,255,255,.025) 18px, transparent 19px);
+            border: 1px solid var(--brass);
+            box-shadow: inset 0 0 0 4px var(--green), inset 0 0 0 5px rgba(215,189,130,.55);
+        }
+        .card-front::before, .card-front::after { position: absolute; left: 50%; width: 28px; height: 1px; content: ""; background: var(--brass); transform: translateX(-50%); }
+        .card-front::before { top: 20%; }
+        .card-front::after { bottom: 20%; }
+        .card-monogram { color: var(--brass-light); font: italic 700 clamp(20px, 5vw, 36px) Georgia, serif; letter-spacing: .08em; text-shadow: 0 1px 3px #10271f; }
+        .card-back { color: var(--ink); background: var(--paper); border: 1px solid var(--brass); transform: rotateY(180deg); }
+        .card-back img {
+            width: 100%;
+            height: 60%;
+            object-fit: cover;
+            object-position: top;
+            background: #e8e1d2;
+            border-bottom: 2px solid var(--brass-light);
+            filter: sepia(.12) saturate(.82);
+        }
+        .card-name { font: 700 clamp(8px, 1.5vw, 11px)/1.1 Georgia, serif; letter-spacing: .025em; }
+        .card-party { margin-top: 3px; color: #765d31; font: 700 8px Arial, sans-serif; letter-spacing: .14em; }
+        .cards-4-rows { height: calc(72dvh / 4); }
+        .cards-6-rows { height: calc(72dvh / 6); }
+        .cards-8-rows { height: calc(72dvh / 8); }
+
+        .theme-overlay { background: rgba(21,43,35,.83); backdrop-filter: blur(5px); }
+        .theme-panel {
+            width: 100%;
+            max-width: 400px;
+            max-height: min(88dvh, 760px);
+            overflow-y: auto;
+            padding: 24px;
+            color: var(--ink);
+            background: var(--paper);
+            border: 1px solid var(--brass);
+            border-radius: 3px;
+            box-shadow: 0 18px 60px rgba(0,0,0,.25), inset 0 0 0 5px var(--paper), inset 0 0 0 6px rgba(173,135,71,.3);
+        }
+        .theme-panel-title { color: var(--green); font: 400 24px Georgia, serif; letter-spacing: .035em; }
+        .theme-close { color: #93866e; font: 300 24px Georgia, serif; }
+        .theme-label { color: var(--muted); font: 700 9px Arial, sans-serif; letter-spacing: .16em; text-transform: uppercase; }
+        .choice-button {
+            color: var(--green);
+            background: #eee8d9;
+            border: 1px solid #d6cbb2;
+            border-radius: 2px;
+            font: 600 14px Georgia, serif;
+            transition: background .15s, color .15s;
+        }
+        .choice-button:hover { background: #e4dcc8; }
+        .choice-button.is-selected { color: var(--paper); background: var(--green); border-color: var(--brass); }
+        .filter-tab {
+            padding: 10px 8px;
+            color: var(--muted);
+            background: transparent;
+            border-bottom: 1px solid #d6cbb2;
+            font: 700 9px Arial, sans-serif;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+        }
+        .filter-tab.is-selected { color: var(--green); border-bottom: 2px solid var(--brass); }
+        .start-button { padding: 15px; color: var(--paper); background: var(--green); border: 1px solid var(--brass); border-radius: 2px; font: 700 10px Arial, sans-serif; letter-spacing: .18em; }
+        .start-button:hover { background: var(--green-light); }
+        .win-overlay { color: var(--paper); background: rgba(24,60,50,.94); backdrop-filter: blur(5px); }
+        .win-title { color: var(--brass-light); font: italic 400 clamp(44px, 12vw, 68px) Georgia, serif; }
+        .win-stats { padding: 20px; background: rgba(9,32,25,.35); border: 1px solid var(--brass); }
+        .win-stat-label { color: #d4c9aa; font: 700 9px Arial, sans-serif; letter-spacing: .16em; }
+        .win-stat-value { color: var(--paper); font: 38px Georgia, serif; }
+        .win-button { color: var(--green); background: var(--brass-light); border: 1px solid #ead9aa; border-radius: 2px; font: 700 10px Arial, sans-serif; letter-spacing: .16em; }
+
+        @media (max-width: 420px) {
+            .game-container { padding: 9px; }
+            .theme-header { gap: 8px; padding: 11px 10px; }
+            .theme-kicker { font-size: 7px; }
+            .theme-stats { gap: 9px; }
+            .theme-stat-label { font-size: 7px; letter-spacing: .1em; }
+            .theme-stat-value { font-size: 16px; }
+            .theme-button { padding: 8px; font-size: 8px; letter-spacing: .08em; }
+            .game-grid { padding: 8px; }
+        }
     </style>
 </head>
-<body class="bg-slate-950 text-white min-h-screen overflow-hidden select-none">
+<body class="min-h-screen overflow-hidden select-none">
 
-<div id="app" class="game-container px-2 py-2" v-cloak>
+<div id="app" class="game-container" v-cloak>
     
-    <div class="flex justify-between items-center mb-1 px-1 bg-slate-900 p-2 rounded-lg border border-slate-800 shrink-0">
-        <div class="flex gap-4">
-            <div class="flex flex-col">
-                <span class="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Tid</span>
-                <span class="font-mono text-blue-400 text-sm leading-none">{{ formattedTime }}</span>
-            </div>
-            <div class="flex flex-col">
-                <span class="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Försök</span>
-                <span class="font-mono text-blue-400 text-sm leading-none">{{ moves }}</span>
-            </div>
+    <div class="theme-header">
+        <div class="theme-brand">
+            <div class="theme-kicker">Stockholm · sedan 1866</div>
+            <div class="theme-title">Riksdags<span>minne</span></div>
         </div>
-        <div class="text-[10px] font-black text-slate-400 truncate px-2 italic uppercase tracking-tighter">{{ currentTitle }}</div>
-        <button @click="showMenu = !showMenu" class="bg-blue-600 active:scale-95 px-3 py-1.5 rounded text-[9px] font-black uppercase transition-all shadow-lg">
-            Inställningar
+        <div class="theme-stats">
+            <div class="theme-stat">
+                <span class="theme-stat-label">Tid</span>
+                <span class="theme-stat-value">{{ formattedTime }}</span>
+            </div>
+            <div class="theme-stat">
+                <span class="theme-stat-label">Försök</span>
+                <span class="theme-stat-value">{{ moves }}</span>
+            </div>
+            <div class="theme-party truncate">{{ currentTitle }}</div>
+        </div>
+        <button @click="showMenu = !showMenu" class="theme-button">
+            Spel
         </button>
     </div>
 
     <div class="game-grid flex-grow" :style="{ gridTemplateColumns: `repeat(${gridColumns}, 1fr)` }">
         <div v-for="(card, index) in cards" :key="index" @click="flipCard(card)" class="card-flip" :class="rowClass">
             <div class="card-inner shadow-xl" :class="{ 'is-flipped': card.isFlipped || card.isMatched, 'is-matched': card.isMatched }">
-                <div class="card-front bg-slate-800 flex items-center justify-center border border-slate-700">
-                    <span class="text-slate-700 font-black text-xl italic opacity-40 leading-none">RD</span>
+                <div class="card-front flex items-center justify-center">
+                    <span class="card-monogram">RD</span>
                 </div>
-                <div class="card-back p-0.5 flex flex-col">
+                <div class="card-back flex flex-col">
                     <img :src="card.person.bild_url_192" class="pointer-events-none">
                     <div class="flex-grow flex flex-col justify-center items-center text-center leading-[1.1] overflow-hidden px-0.5">
-                        <p class="text-[8px] sm:text-[10px] font-black uppercase truncate w-full">
+                        <p class="card-name uppercase truncate w-full">
                             {{ card.person.tilltalsnamn }}
                         </p>
-                        <p class="text-[8px] sm:text-[10px] font-black uppercase truncate w-full">
+                        <p class="card-name uppercase truncate w-full">
                             {{ card.person.efternamn }}
                         </p>
-                        <p class="text-[7px] font-bold text-blue-600 mt-0.5 uppercase tracking-tighter">
+                        <p class="card-party uppercase">
                             {{ card.person.parti }}
                         </p>
                     </div>
@@ -87,42 +223,49 @@
         </div>
     </div>
 
-    <div v-if="showMenu" class="fixed inset-0 z-[100] bg-slate-950/95 p-4 flex items-center justify-center backdrop-blur-sm">
-        <div class="max-w-md w-full bg-white text-slate-900 p-6 rounded-3xl shadow-2xl">
-            <h2 class="text-xl font-black mb-4 flex justify-between items-center text-slate-800 uppercase tracking-tighter">
-                Inställningar 
-                <button @click="showMenu = false" class="text-slate-300 hover:text-slate-500 font-light">✕</button>
+    <div v-if="showMenu" class="theme-overlay fixed inset-0 z-[100] p-4 flex items-center justify-center">
+        <div class="theme-panel">
+            <h2 class="theme-panel-title mb-6 flex justify-between items-center">
+                En ny omgång
+                <button @click="showMenu = false" class="theme-close hover:text-slate-500">✕</button>
             </h2>
             <div class="space-y-5">
                 <div>
-                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Antal par</label>
+                    <label class="theme-label">Antal par</label>
                     <div class="grid grid-cols-4 gap-2 mt-1">
-                        <button v-for="n in [4, 6, 8, 12]" @click="settings.pairs = n" :class="settings.pairs === n ? 'bg-blue-600 text-white' : 'bg-slate-100'" class="py-2.5 rounded-xl font-bold transition-all">{{ n }}</button>
+                        <button v-for="n in [4, 6, 8, 12]" @click="settings.pairs = n" :class="{ 'is-selected': settings.pairs === n }" class="choice-button py-2.5">{{ n }}</button>
                     </div>
                 </div>
                 <div>
-                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Välj Parti</label>
-                    <div class="grid grid-cols-4 gap-1 mt-1">
-                        <button v-for="p in partier" @click="selectFilter('parti', p.kod)" :class="isActive('parti', p.kod) ? 'bg-blue-600 text-white' : 'bg-slate-100'" class="py-2 rounded-lg text-[10px] font-black uppercase">{{ p.kod }}</button>
+                    <label class="theme-label">Spela med</label>
+                    <div class="grid grid-cols-2 mt-1">
+                        <button @click="selectFilterType('parti')" :class="{ 'is-selected': settings.filterType === 'parti' }" class="filter-tab">Parti</button>
+                        <button @click="selectFilterType('utskott')" :class="{ 'is-selected': settings.filterType === 'utskott' }" class="filter-tab">Utskott</button>
+                    </div>
+                    <div v-if="settings.filterType === 'parti'" class="grid grid-cols-4 gap-1 mt-2">
+                        <button v-for="p in partier" @click="selectFilter('parti', p.kod)" :class="{ 'is-selected': isActive('parti', p.kod) }" class="choice-button py-2 text-[10px] uppercase">{{ p.kod }}</button>
+                    </div>
+                    <div v-else class="grid grid-cols-2 gap-1 mt-2">
+                        <button v-for="u in utskott" @click="selectFilter('utskott', u.kod)" :class="{ 'is-selected': isActive('utskott', u.kod) }" class="choice-button min-h-10 px-2 py-2 text-left text-[10px] leading-tight">{{ u.namn }}</button>
                     </div>
                 </div>
-                <button @click="loadGame" :disabled="loading" class="w-full bg-slate-900 text-white font-bold py-4 rounded-2xl shadow-lg mt-4 uppercase tracking-widest active:scale-95 transition-all text-sm">
-                    {{ loading ? 'Hämtar...' : 'Starta Spelet' }}
+                <button @click="loadGame" :disabled="loading" class="start-button w-full mt-2 active:scale-[.99] transition-all">
+                    {{ loading ? 'Förbereder...' : 'Börja spela' }}
                 </button>
             </div>
         </div>
     </div>
 
-    <div v-if="gameWon" class="fixed inset-0 z-[110] flex items-center justify-center bg-blue-600/90 backdrop-blur-md text-center p-6">
+    <div v-if="gameWon" class="win-overlay fixed inset-0 z-[110] flex items-center justify-center text-center p-6">
         <div class="max-w-sm relative">
-            <button @click="gameWon = false" class="absolute -top-12 right-0 text-white text-3xl opacity-50">✕</button>
+            <button @click="gameWon = false" class="absolute -top-12 right-0 text-white text-3xl opacity-60">✕</button>
             
-            <h2 class="text-6xl mb-4 italic font-black text-white uppercase tracking-tighter">KLAR!</h2>
-            <div class="bg-blue-700/50 p-6 rounded-3xl border border-blue-400 mb-8 space-y-4 shadow-inner">
-                <div><p class="text-[10px] uppercase font-bold opacity-70 text-white">Tid</p><p class="text-4xl font-black text-white">{{ formattedTime }}</p></div>
-                <div><p class="text-[10px] uppercase font-bold opacity-70 text-white">Försök</p><p class="text-4xl font-black text-white">{{ moves }}</p></div>
+            <h2 class="win-title mb-4">Utmärkt!</h2>
+            <div class="win-stats mb-8 space-y-4">
+                <div><p class="win-stat-label uppercase">Tid</p><p class="win-stat-value">{{ formattedTime }}</p></div>
+                <div><p class="win-stat-label uppercase">Försök</p><p class="win-stat-value">{{ moves }}</p></div>
             </div>
-            <button @click="loadGame" class="bg-white text-blue-600 font-black py-4 px-12 rounded-full text-xl shadow-2xl active:scale-95 transition-all w-full">SPELA IGEN</button>
+            <button @click="loadGame" class="win-button py-4 px-12 active:scale-95 transition-all w-full">En omgång till</button>
         </div>
     </div>
 </div>
@@ -135,6 +278,23 @@ createApp({
             loading: false, showMenu: true, gameWon: false, cards: [], flippedCards: [], time: 0, moves: 0, timerInterval: null, currentTitle: 'Memory',
             settings: { pairs: 8, filterType: 'parti', filterValue: 'S' },
             partier: [{kod:'S'},{kod:'M'},{kod:'SD'},{kod:'C'},{kod:'V'},{kod:'KD'},{kod:'MP'},{kod:'L'}],
+            utskott: [
+                { kod: 'AU', namn: 'Arbetsmarknadsutskottet' },
+                { kod: 'CU', namn: 'Civilutskottet' },
+                { kod: 'FiU', namn: 'Finansutskottet' },
+                { kod: 'FöU', namn: 'Försvarsutskottet' },
+                { kod: 'JuU', namn: 'Justitieutskottet' },
+                { kod: 'KU', namn: 'Konstitutionsutskottet' },
+                { kod: 'KrU', namn: 'Kulturutskottet' },
+                { kod: 'MJU', namn: 'Miljö- och jordbruksutskottet' },
+                { kod: 'NU', namn: 'Näringsutskottet' },
+                { kod: 'SkU', namn: 'Skatteutskottet' },
+                { kod: 'SoU', namn: 'Socialutskottet' },
+                { kod: 'SfU', namn: 'Socialförsäkringsutskottet' },
+                { kod: 'TU', namn: 'Trafikutskottet' },
+                { kod: 'UbU', namn: 'Utbildningsutskottet' },
+                { kod: 'UU', namn: 'Utrikesutskottet' },
+            ],
         }
     },
     computed: {
@@ -158,7 +318,18 @@ createApp({
     },
     methods: {
         selectFilter(t, v) { this.settings.filterType = t; this.settings.filterValue = v; },
+        selectFilterType(type) {
+            if (this.settings.filterType !== type) {
+                this.settings.filterType = type;
+                this.settings.filterValue = type === 'parti' ? 'S' : 'AU';
+            }
+        },
         isActive(t, v) { return this.settings.filterType === t && this.settings.filterValue === v; },
+        filterLabel() {
+            if (this.settings.filterType === 'parti') return this.settings.filterValue;
+            const selected = this.utskott.find(u => u.kod === this.settings.filterValue);
+            return selected ? selected.namn : this.settings.filterValue;
+        },
         
         async loadGame() {
             this.loading = true; this.gameWon = false; this.stopTimer(); this.time = 0; this.moves = 0; this.cards = [];
@@ -166,12 +337,20 @@ createApp({
                 const res = await fetch('./data/personlista.json');
                 if (!res.ok) throw new Error(`Kunde inte läsa persondata: HTTP ${res.status}`);
                 const people = await res.json();
-                let list = people.filter(p => p.parti === this.settings.filterValue && p.intressent_id && p.bild_url_192);
+                let list = people.filter(p => {
+                    const matches = this.settings.filterType === 'parti'
+                        ? p.parti === this.settings.filterValue
+                        : Array.isArray(p.utskott) && p.utskott.includes(this.settings.filterValue);
+                    return matches && p.intressent_id && p.bild_url_192;
+                });
                 if (list.length < this.settings.pairs) throw new Error('För få personer med bild för valt parti.');
                 const sel = list.sort(() => 0.5 - Math.random()).slice(0, this.settings.pairs);
                 this.cards = [...sel, ...sel].map((p, i) => ({ id: i, pId: p.intressent_id, person: p, isFlipped: false, isMatched: false })).sort(() => 0.5 - Math.random());
-                this.currentTitle = this.settings.filterValue; this.showMenu = false;
-            } catch (e) { alert("Fel vid hämtning."); } finally { this.loading = false; }
+                this.currentTitle = this.filterLabel(); this.showMenu = false;
+            } catch (e) {
+                const message = e instanceof Error ? e.message : String(e);
+                alert(`Kunde inte starta spelet: ${message}`);
+            } finally { this.loading = false; }
         },
 
         flipCard(c) {
@@ -206,8 +385,8 @@ createApp({
         celebrate() {
             const end = Date.now() + 2500;
             (function frame() {
-                confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#005293', '#febc11'] });
-                confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#005293', '#febc11'] });
+                confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#183c32', '#ad8747', '#d7bd82'] });
+                confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#183c32', '#ad8747', '#d7bd82'] });
                 if (Date.now() < end) requestAnimationFrame(frame);
             }());
         }
