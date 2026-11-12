@@ -163,10 +163,11 @@ createApp({
         async loadGame() {
             this.loading = true; this.gameWon = false; this.stopTimer(); this.time = 0; this.moves = 0; this.cards = [];
             try {
-                const url = `https://data.riksdagen.se/personlista/?utformat=json&${this.settings.filterType}=${encodeURIComponent(this.settings.filterValue)}&rdlstatus=tjanst`;
-                const res = await fetch(url);
-                const data = await res.json();
-                let list = data.personlista.person.filter(p => p.bild_url_192);
+                const res = await fetch('./data/personlista.json');
+                if (!res.ok) throw new Error(`Kunde inte läsa persondata: HTTP ${res.status}`);
+                const people = await res.json();
+                let list = people.filter(p => p.parti === this.settings.filterValue && p.intressent_id && p.bild_url_192);
+                if (list.length < this.settings.pairs) throw new Error('För få personer med bild för valt parti.');
                 const sel = list.sort(() => 0.5 - Math.random()).slice(0, this.settings.pairs);
                 this.cards = [...sel, ...sel].map((p, i) => ({ id: i, pId: p.intressent_id, person: p, isFlipped: false, isMatched: false })).sort(() => 0.5 - Math.random());
                 this.currentTitle = this.settings.filterValue; this.showMenu = false;

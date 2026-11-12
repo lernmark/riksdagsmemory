@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rd-memory-v2';
+const CACHE_NAME = 'rd-memory-v3';
 // Vi cachar bara lokala filer till att börja med för att undvika "Failed to fetch"
 const ASSETS = [
   './',
@@ -14,8 +14,18 @@ self.addEventListener('install', e => {
         ASSETS.map(url => {
           return cache.add(url).catch(err => console.warn(`Kunde inte cacha: ${url}`, err));
         })
-      );
+      ).then(() => self.skipWaiting());
     })
+  );
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys => Promise.all(
+      keys
+        .filter(key => key.startsWith('rd-memory-') && key !== CACHE_NAME)
+        .map(key => caches.delete(key))
+    )).then(() => self.clients.claim())
   );
 });
 
