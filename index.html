@@ -102,17 +102,32 @@
         .card-front::after { bottom: 20%; }
         .card-monogram { color: var(--brass-light); font: italic 700 clamp(20px, 5vw, 36px) Georgia, serif; letter-spacing: .08em; text-shadow: 0 1px 3px #10271f; }
         .card-back { color: var(--ink); background: var(--paper); border: 1px solid var(--brass); transform: rotateY(180deg); }
-        .card-back img {
+        .card-photo { position: relative; flex: 0 0 66%; min-height: 0; background: #e8e1d2; }
+        .card-photo img {
             width: 100%;
-            height: 60%;
+            height: 100%;
             object-fit: cover;
             object-position: top;
-            background: #e8e1d2;
             border-bottom: 2px solid var(--brass-light);
             filter: sepia(.12) saturate(.82);
         }
-        .card-name { font: 700 clamp(8px, 1.5vw, 11px)/1.1 Georgia, serif; letter-spacing: .025em; }
-        .card-party { margin-top: 3px; color: #765d31; font: 700 8px Arial, sans-serif; letter-spacing: .14em; }
+        .card-party-badge {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            display: grid;
+            min-width: 20px;
+            height: 20px;
+            place-items: center;
+            padding: 0 4px;
+            color: var(--paper);
+            background: rgba(24,60,50,.94);
+            border: 1px solid var(--brass-light);
+            font: 700 9px Arial, sans-serif;
+            letter-spacing: .04em;
+            text-shadow: 0 1px 2px rgba(0,0,0,.4);
+        }
+        .card-name { font: 700 clamp(8px, 2.1vw, 11px)/1.1 Georgia, serif; letter-spacing: .025em; }
         .cards-4-rows { height: calc(72dvh / 4); }
         .cards-6-rows { height: calc(72dvh / 6); }
         .cards-8-rows { height: calc(72dvh / 8); }
@@ -206,16 +221,16 @@
                     <span class="card-monogram">RD</span>
                 </div>
                 <div class="card-back flex flex-col">
-                    <img :src="card.person.bild_url_192" class="pointer-events-none">
-                    <div class="flex-grow flex flex-col justify-center items-center text-center leading-[1.1] overflow-hidden px-0.5">
+                    <div class="card-photo">
+                        <img :src="card.person.bild_url_192" class="pointer-events-none">
+                        <span class="card-party-badge">{{ card.person.parti }}</span>
+                    </div>
+                    <div class="flex flex-grow flex-col justify-center items-center text-center leading-[1.1] overflow-hidden px-0.5">
                         <p class="card-name uppercase truncate w-full">
                             {{ card.person.tilltalsnamn }}
                         </p>
                         <p class="card-name uppercase truncate w-full">
                             {{ card.person.efternamn }}
-                        </p>
-                        <p class="card-party uppercase">
-                            {{ card.person.parti }}
                         </p>
                     </div>
                 </div>
